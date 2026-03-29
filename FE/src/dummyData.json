@@ -1,0 +1,5 @@
+[
+  { "id": 1, "name": "BaoCaoTuan1.pdf", "type": "pdf", "size": 1024000, "updatedAt": "2026-03-28" },
+  { "id": 2, "name": "ThietKeDB.png", "type": "image", "size": 2500000, "updatedAt": "2026-03-27" },
+  { "id": 3, "name": "TaiLieuHuongDan.docx", "type": "word", "size": 500000, "updatedAt": "2026-03-26" }
+]
