@@ -13,7 +13,7 @@ public class File {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String displayName; // Tên file người dùng đặt
+    private String displayName;
 
     @ManyToOne
     @JoinColumn(name = "folder_id")
