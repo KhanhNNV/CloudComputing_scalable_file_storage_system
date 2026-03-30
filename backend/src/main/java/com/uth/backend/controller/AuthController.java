@@ -78,19 +78,19 @@ public class AuthController {
             HttpServletRequest request,
             @CookieValue(name = "refreshToken", required = false) String refreshToken) {
 
-        // 1. Lấy Access Token từ Header ném vào Redis
+        // Lấy Access Token từ Header đưa vào Redis
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String accessToken = authHeader.substring(7);
             tokenBlacklistService.addToBlacklist(accessToken);
         }
 
-        // 2. Ném Refresh Token vào Redis
+        // Đưa Refresh Token vào Redis
         if (refreshToken != null && !refreshToken.isEmpty()) {
             tokenBlacklistService.addToBlacklist(refreshToken);
         }
 
-        // 3. Xóa Cookie ở máy Client
+        // Xóa Cookie ở máy Client
         ResponseCookie cleanCookie = ResponseCookie.from("refreshToken", "")
                 .httpOnly(true)
                 .secure(false)
