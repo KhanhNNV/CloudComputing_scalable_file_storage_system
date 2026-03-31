@@ -13,7 +13,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/files")
 @RequiredArgsConstructor
-@CrossOrigin("*")
 public class FileController {
 
     private final FileService fileService;

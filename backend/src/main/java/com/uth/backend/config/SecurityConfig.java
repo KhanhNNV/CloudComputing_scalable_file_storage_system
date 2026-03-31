@@ -45,7 +45,17 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*"));
+        
+        // 1. Xóa dòng chứa List.of("*") và thay bằng địa chỉ Frontend
+        configuration.setAllowedOrigins(List.of(
+            "http://localhost:5173",
+            "http://localhost:5174", 
+            "http://localhost:3000"
+        ));
+        
+        // 2. Thêm dòng này để cho phép Frontend gửi Cookie (kết hợp với withCredentials: true)
+        configuration.setAllowCredentials(true); 
+
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
 
