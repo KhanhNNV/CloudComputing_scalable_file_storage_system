@@ -26,7 +26,7 @@ public class FolderServiceImpl implements FolderService {
         Folder parentFolder = null;
         if (request.getParentId() != null) {
             parentFolder = folderRepository.findById(request.getParentId())
-                    .orElseThrow(() -> new RuntimeException("Parent folder not found"));
+                    .orElseThrow(() -> new RuntimeException("Thư mục cha không tồn tại"));
         }
 
         // Kiểm tra xem tên Thư mục có bị trùng với các Thư mục khác ở cùng một cấp độ (cùng Cha) hay không
@@ -35,7 +35,7 @@ public class FolderServiceImpl implements FolderService {
                 folderRepository.existsByOwnerIdAndNameAndParentFolderIsNull(ownerId, request.getName());
 
         if (exists) {
-            throw new RuntimeException("Folder with name " + request.getName() + " already exists");
+            throw new RuntimeException("Thư mục có tên " + request.getName() + " đã tồn tại");
         }
 
         Folder folder = new Folder();
@@ -61,10 +61,10 @@ public class FolderServiceImpl implements FolderService {
     @Override
     public void deleteFolder(Long ownerId, Long folderId) {
         Folder folder = folderRepository.findById(folderId)
-                .orElseThrow(() -> new RuntimeException("Folder not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thư mục"));
         
         if (folder.getOwner().getId() != ownerId) {
-            throw new RuntimeException("Access denied");
+            throw new RuntimeException("Truy cập bị từ chối");
         }
 
         folderRepository.delete(folder);

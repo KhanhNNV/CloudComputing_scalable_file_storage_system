@@ -19,4 +19,6 @@ public class StorageObject {
     private String s3Key;
 
     private Long size;
+    
+    private String status = "uploading";
 }

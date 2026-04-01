@@ -49,7 +49,7 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody RegisterRequest request) {
         authenticationService.register(request);
-        return ResponseEntity.ok("User registered successfully");
+        return ResponseEntity.ok("Người dùng đã đăng ký thành công");
     }
 
     @PostMapping("/refresh")
@@ -58,12 +58,12 @@ public class AuthController {
 
         try {
             if (refreshToken == null || !jwtService.verifyToken(refreshToken)) {
-                return ResponseEntity.status(403).build(); // 403 Forbidden
+                return ResponseEntity.status(403).build(); // 403 Bị cấm
             }
 
             String email = jwtService.extractUsername(refreshToken);
             User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
             String newAccessToken = jwtService.generateAccessToken(user);
 
