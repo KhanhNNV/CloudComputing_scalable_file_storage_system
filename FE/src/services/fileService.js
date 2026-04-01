@@ -24,7 +24,7 @@ export const fileService = {
     return { data: { presignedUrl: `https://mock-s3-url.com/upload/${fileName}` } };
   },
 
-    // --- KỸ NĂNG MỚI: Băm file tại trình duyệt (Ý nhóm trưởng) ---
+    
     calculateFileHash: async (file) => {
         const arrayBuffer = await file.arrayBuffer();
         const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);

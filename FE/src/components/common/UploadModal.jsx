@@ -3,20 +3,18 @@ import { X, FileUp } from 'lucide-react';
 import { fileService } from '../../services/fileService'; // Import "máy băm" của Bình
 
 export default function UploadModal({ isOpen, onClose }) {
-    // GIỮ NGUYÊN: Check đóng mở modal
+
     if (!isOpen) return null;
 
-    // LOGIC MỚI CỦA BÌNH: Tính SHA-256 khi chọn file
+
     const handleFileChange = async (event) => {
         const file = event.target.files[0];
         if (!file) return;
 
-        // In Log đúng ý nhóm trưởng sấy nãy giờ
         console.log("%c [Worker] Đang xử lý file: " + file.name, "color: #3b82f6; font-weight: bold;");
 
         const hash = await fileService.calculateFileHash(file);
 
-        // LOG "LẤP LÁNH" CHO NHÓM TRƯỞNG XEM
         console.log("%c ===> SHA-256: " + hash, "color: #10b981; font-weight: bold; font-size: 14px;");
         alert("Đã băm xong file!");
     };
