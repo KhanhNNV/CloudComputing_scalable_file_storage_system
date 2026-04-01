@@ -22,5 +22,15 @@ export const fileService = {
   getUploadUrl: async (fileName) => {
     // Mock trả về một URL giả để test UI
     return { data: { presignedUrl: `https://mock-s3-url.com/upload/${fileName}` } };
-  }
+  },
+
+    
+    calculateFileHash: async (file) => {
+        const arrayBuffer = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        // Trả về chuỗi 64 ký tự để kẹp vào API gửi lên BE
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    },
+
 }
