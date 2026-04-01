@@ -38,7 +38,19 @@ export default function Drive() {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {(files || []).map((file) => (
           <div key={file.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors flex flex-col items-center gap-3 shadow-sm">
-            {getFileIcon(file.type)}
+            
+            {/* THAY ĐỔI Ở ĐÂY: Logic hiển thị Thumbnail hoặc Icon */}
+            {file.type === 'image' && file.thumbnailUrl ? (
+              <img 
+                src={file.thumbnailUrl} 
+                alt={file.name} 
+                className="w-12 h-12 object-cover rounded-md shadow-sm" 
+              />
+            ) : (
+              getFileIcon(file.type)
+            )}
+            {/* KẾT THÚC THAY ĐỔI */}
+
             <div className="text-center w-full">
               <p className="text-sm font-medium text-gray-700 truncate" title={file.name}>{file.name}</p>
               <p className="text-xs text-gray-500 mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
