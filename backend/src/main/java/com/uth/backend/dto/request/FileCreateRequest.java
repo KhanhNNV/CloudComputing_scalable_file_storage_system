@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class FileCreateRequest {
-    private String displayName;
+    private String name;
     private Long folderId;
     private Long storageObjectId;
 }

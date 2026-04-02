@@ -14,4 +14,9 @@ public interface FileService {
     void deleteFile(Long ownerId, Long fileId);
     UploadResponseDto requestUpload(Long ownerId, UploadRequestDto requestDto);
     void confirmUpload(Long ownerId, ConfirmUploadRequestDto requestDto);
+    String getFileDownloadUrl(Long ownerId, Long fileId);
+    List<FileResponse> getTrashFiles(Long ownerId);
+    void restoreFile(Long ownerId, Long fileId);
+    void deleteFilesByFolder(Long ownerId, Long folderId);
+    void restoreFilesByFolder(Long ownerId, Long folderId);
 }

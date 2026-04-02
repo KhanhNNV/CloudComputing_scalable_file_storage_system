@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/files")
+@RequestMapping("/api/files")
 @RequiredArgsConstructor
 public class FileController {
 
@@ -34,13 +34,6 @@ public class FileController {
         return ResponseEntity.ok(fileService.getFilesByFolder(userId, folderId));
     }
     
-    @GetMapping("/folder/{folderId}")
-    public ResponseEntity<List<FileResponse>> getFilesByFolderPath(
-            @RequestParam("userId") Long userId,
-            @PathVariable("folderId") Long folderId) {
-        return ResponseEntity.ok(fileService.getFilesByFolder(userId, folderId));
-    }
-
     @PostMapping("/request-upload")
     public ResponseEntity<UploadResponseDto> requestUpload(
             @RequestParam("userId") Long userId,
@@ -62,5 +55,20 @@ public class FileController {
             @PathVariable("id") Long fileId) {
         fileService.deleteFile(userId, fileId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/download-url")
+    public ResponseEntity<String> getFileDownloadUrl(
+            @RequestParam("userId") Long userId,
+            @PathVariable("id") Long fileId) {
+        return ResponseEntity.ok(fileService.getFileDownloadUrl(userId, fileId));
+    }
+
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<Void> restoreFile(
+            @RequestParam("userId") Long userId,
+            @PathVariable("id") Long fileId) {
+        fileService.restoreFile(userId, fileId);
+        return ResponseEntity.ok().build();
     }
 }

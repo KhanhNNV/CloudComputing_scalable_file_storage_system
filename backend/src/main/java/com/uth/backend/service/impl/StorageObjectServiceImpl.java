@@ -15,8 +15,8 @@ public class StorageObjectServiceImpl implements StorageObjectService {
     private final StorageObjectRepository storageObjectRepository;
 
     @Override
-    public StorageObject createOrGetStorageObject(String sha256, Long size, String s3Key) {
-        // Bắt đầu Deduplication: Nếu mã SHA-256 đã tồn tại trên Cloud, lấy ra dùng lại luôn
+    public StorageObject createOrGetStorageObject(String sha256, Long size, String s3Key, String mimeType) {
+        // Bắt đầu Deduplication: Nếu mã hash đã tồn tại trên Cloud, lấy ra dùng lại luôn
         Optional<StorageObject> existingObj = storageObjectRepository.findBySha256(sha256);
         if (existingObj.isPresent()) {
             return existingObj.get();
@@ -26,6 +26,7 @@ public class StorageObjectServiceImpl implements StorageObjectService {
         newObj.setSha256(sha256);
         newObj.setSize(size);
         newObj.setS3Key(s3Key);
+        newObj.setMimeType(mimeType);
         
         return storageObjectRepository.save(newObj);
     }

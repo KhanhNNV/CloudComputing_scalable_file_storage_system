@@ -18,6 +18,7 @@ import com.uth.backend.service.S3Service;
 import com.uth.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -50,15 +51,15 @@ public class FileServiceImpl implements FileService {
         }
 
         boolean exists = folder != null ?
-                fileRepository.existsByOwnerIdAndDisplayNameAndFolderId(ownerId, request.getDisplayName(), folder.getId()) :
-                fileRepository.existsByOwnerIdAndDisplayNameAndFolderIsNull(ownerId, request.getDisplayName());
+                fileRepository.existsByOwnerIdAndNameAndFolderIdAndIsDeletedFalse(ownerId, request.getName(), folder.getId()) :
+                fileRepository.existsByOwnerIdAndNameAndFolderIsNullAndIsDeletedFalse(ownerId, request.getName());
 
         if (exists) {
-            throw new RuntimeException("Tệp có tên " + request.getDisplayName() + " đã tồn tại trong thư mục này");
+            throw new RuntimeException("Tệp có tên " + request.getName() + " đã tồn tại trong thư mục này");
         }
 
         File file = new File();
-        file.setDisplayName(request.getDisplayName());
+        file.setName(request.getName());
         file.setOwner(owner);
         file.setFolder(folder);
         file.setStorageObject(storageObject);
@@ -68,6 +69,7 @@ public class FileServiceImpl implements FileService {
     }
     
     @Override
+    @Transactional
     public UploadResponseDto requestUpload(Long ownerId, UploadRequestDto request) {
         User owner = userService.getUserEntityById(ownerId);
         
@@ -108,6 +110,7 @@ public class FileServiceImpl implements FileService {
             newObj.setSha256(request.getSha256());
             newObj.setS3Key(fileKey);
             newObj.setSize(request.getFileSize());
+            newObj.setMimeType(request.getContentType());
             newObj.setStatus("uploading");
             storageObjectRepository.save(newObj);
             
@@ -123,6 +126,7 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
+    @Transactional
     public void confirmUpload(Long ownerId, ConfirmUploadRequestDto request) {
         User owner = userService.getUserEntityById(ownerId);
         StorageObject storageObject = storageObjectRepository.findByS3Key(request.getFileKey())
@@ -144,15 +148,15 @@ public class FileServiceImpl implements FileService {
         }
         
         boolean exists = folder != null ?
-                fileRepository.existsByOwnerIdAndDisplayNameAndFolderId(owner.getId(), fileName, folder.getId()) :
-                fileRepository.existsByOwnerIdAndDisplayNameAndFolderIsNull(owner.getId(), fileName);
+                fileRepository.existsByOwnerIdAndNameAndFolderIdAndIsDeletedFalse(owner.getId(), fileName, folder.getId()) :
+                fileRepository.existsByOwnerIdAndNameAndFolderIsNullAndIsDeletedFalse(owner.getId(), fileName);
                 
         if (exists) {
             throw new RuntimeException("Tệp có tên " + fileName + " đã tồn tại trong thư mục này");
         }
 
         File file = new File();
-        file.setDisplayName(fileName);
+        file.setName(fileName);
         file.setOwner(owner);
         file.setFolder(folder);
         file.setStorageObject(storageObject);
@@ -164,9 +168,9 @@ public class FileServiceImpl implements FileService {
     public List<FileResponse> getFilesByFolder(Long ownerId, Long folderId) {
         List<File> files;
         if (folderId == null) {
-            files = fileRepository.findByOwnerIdAndFolderIsNull(ownerId);
+            files = fileRepository.findByOwnerIdAndFolderIsNullAndIsDeletedFalse(ownerId);
         } else {
-            files = fileRepository.findByOwnerIdAndFolderId(ownerId, folderId);
+            files = fileRepository.findByOwnerIdAndFolderIdAndIsDeletedFalse(ownerId, folderId);
         }
         return files.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
@@ -176,21 +180,118 @@ public class FileServiceImpl implements FileService {
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tệp"));
         
-        if (file.getOwner().getId() != ownerId) {
+        if (!file.getOwner().getId().equals(ownerId)) {
             throw new RuntimeException("Truy cập bị từ chối");
         }
         
-        fileRepository.delete(file);
+        file.setDeleted(true);
+        fileRepository.save(file);
+    }
+    
+    @Override
+    @Transactional
+    public void deleteFilesByFolder(Long ownerId, Long folderId) {
+        List<File> files = fileRepository.findByOwnerIdAndFolderIdAndIsDeletedFalse(ownerId, folderId);
+        for (File file : files) {
+            file.setDeleted(true);
+            fileRepository.save(file);
+        }
+    }
+
+    @Override
+    public String getFileDownloadUrl(Long ownerId, Long fileId) {
+        File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tệp"));
+
+        if (!file.getOwner().getId().equals(ownerId)) {
+            throw new RuntimeException("Truy cập bị từ chối");
+        }
+
+        if (file.getStorageObject() == null) {
+            throw new RuntimeException("Tệp chưa có dữ liệu vật lý");
+        }
+
+        return s3Service.generateDownloadPresignedUrl(file.getStorageObject().getS3Key(), file.getName());
+    }
+
+    @Override
+    public List<FileResponse> getTrashFiles(Long ownerId) {
+        List<File> files = fileRepository.findByOwnerIdAndIsDeletedTrue(ownerId);
+        return files.stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void restoreFile(Long ownerId, Long fileId) {
+        File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tệp"));
+        
+        if (!file.getOwner().getId().equals(ownerId)) {
+            throw new RuntimeException("Truy cập bị từ chối");
+        }
+        
+        if (!file.isDeleted()) {
+            return; // Đã đang hoạt động thì không cần khôi phục
+        }
+        
+        // Tự động đổi tên nếu bị trùng tại thư mục đích
+        Long folderId = file.getFolder() != null ? file.getFolder().getId() : null;
+        String uniqueName = generateUniqueFileName(ownerId, folderId, file.getName());
+        file.setName(uniqueName);
+        
+        file.setDeleted(false);
+        fileRepository.save(file);
+    }
+    
+    @Override
+    @Transactional
+    public void restoreFilesByFolder(Long ownerId, Long folderId) {
+        List<File> files = fileRepository.findByOwnerIdAndIsDeletedTrue(ownerId);
+        // Ở đây chúng ta chỉ khôi phục các file trỏ vào folder này
+        for (File file : files) {
+            if (file.getFolder() != null && file.getFolder().getId().equals(folderId)) {
+                restoreFile(ownerId, file.getId());
+            }
+        }
+    }
+
+    private String generateUniqueFileName(Long ownerId, Long folderId, String originalName) {
+        String baseName = originalName;
+        String extension = "";
+        int lastDotIndex = originalName.lastIndexOf(".");
+        if (lastDotIndex > 0) {
+            baseName = originalName.substring(0, lastDotIndex);
+            extension = originalName.substring(lastDotIndex);
+        }
+
+        String currentName = originalName;
+        int counter = 1;
+        while (checkFileExists(ownerId, folderId, currentName)) {
+            currentName = baseName + " (" + counter + ")" + extension;
+            counter++;
+        }
+        return currentName;
+    }
+
+    private boolean checkFileExists(Long ownerId, Long folderId, String name) {
+        if (folderId != null) {
+            return fileRepository.existsByOwnerIdAndNameAndFolderIdAndIsDeletedFalse(ownerId, name, folderId);
+        } else {
+            return fileRepository.existsByOwnerIdAndNameAndFolderIsNullAndIsDeletedFalse(ownerId, name);
+        }
     }
 
     private FileResponse mapToResponse(File file) {
         return FileResponse.builder()
                 .id(file.getId())
-                .displayName(file.getDisplayName())
+                .name(file.getName())
                 .folderId(file.getFolder() != null ? file.getFolder().getId() : null)
                 .ownerId(file.getOwner().getId())
                 .sha256(file.getStorageObject() != null ? file.getStorageObject().getSha256() : null)
                 .size(file.getStorageObject() != null ? file.getStorageObject().getSize() : null)
+                .mimeType(file.getStorageObject() != null ? file.getStorageObject().getMimeType() : null)
+                .isDeleted(file.isDeleted())
+                .createdAt(file.getCreatedAt())
                 .build();
     }
 }
