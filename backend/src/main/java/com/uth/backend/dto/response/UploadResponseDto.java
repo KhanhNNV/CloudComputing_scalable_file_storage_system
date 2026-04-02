@@ -5,16 +5,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserResponse {
-    private Long id;
-    private String fullName;
-    private String email;
-    private Long storageUsed;
-    private LocalDateTime createdAt;
+public class UploadResponseDto {
+    private String status;
+    private UploadResponseDataDto data;
 }

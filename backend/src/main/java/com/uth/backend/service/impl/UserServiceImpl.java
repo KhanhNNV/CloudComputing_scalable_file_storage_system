@@ -28,6 +28,8 @@ public class UserServiceImpl implements UserService {
                 .id(user.getId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
+                .storageUsed(user.getStorageUsed())
+                .createdAt(user.getCreatedAt())
                 .build();
     }
 
@@ -49,6 +51,8 @@ public class UserServiceImpl implements UserService {
                 .id(user.getId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
+                .storageUsed(user.getStorageUsed())
+                .createdAt(user.getCreatedAt())
                 .build();
     }
 }

@@ -1,7 +1,10 @@
 package com.uth.backend.controller;
 
+import com.uth.backend.dto.request.ConfirmUploadRequestDto;
 import com.uth.backend.dto.request.FileCreateRequest;
+import com.uth.backend.dto.request.UploadRequestDto;
 import com.uth.backend.dto.response.FileResponse;
+import com.uth.backend.dto.response.UploadResponseDto;
 import com.uth.backend.service.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -11,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/files")
+@RequestMapping("/api/files")
 @RequiredArgsConstructor
 public class FileController {
 
@@ -30,6 +33,21 @@ public class FileController {
             @RequestParam(value = "folderId", required = false) Long folderId) {
         return ResponseEntity.ok(fileService.getFilesByFolder(userId, folderId));
     }
+    
+    @PostMapping("/request-upload")
+    public ResponseEntity<UploadResponseDto> requestUpload(
+            @RequestParam("userId") Long userId,
+            @RequestBody UploadRequestDto request) {
+        return ResponseEntity.ok(fileService.requestUpload(userId, request));
+    }
+
+    @PostMapping("/confirm-upload")
+    public ResponseEntity<Void> confirmUpload(
+            @RequestParam("userId") Long userId,
+            @RequestBody ConfirmUploadRequestDto request) {
+        fileService.confirmUpload(userId, request);
+        return ResponseEntity.ok().build();
+    }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteFile(
@@ -37,5 +55,20 @@ public class FileController {
             @PathVariable("id") Long fileId) {
         fileService.deleteFile(userId, fileId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/download-url")
+    public ResponseEntity<String> getFileDownloadUrl(
+            @RequestParam("userId") Long userId,
+            @PathVariable("id") Long fileId) {
+        return ResponseEntity.ok(fileService.getFileDownloadUrl(userId, fileId));
+    }
+
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<Void> restoreFile(
+            @RequestParam("userId") Long userId,
+            @PathVariable("id") Long fileId) {
+        fileService.restoreFile(userId, fileId);
+        return ResponseEntity.ok().build();
     }
 }

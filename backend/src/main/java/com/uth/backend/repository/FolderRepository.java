@@ -8,8 +8,10 @@ import java.util.List;
 
 @Repository
 public interface FolderRepository extends JpaRepository<Folder, Long> {
-    List<Folder> findByOwnerIdAndParentFolderId(Long ownerId, Long parentId);
-    List<Folder> findByOwnerIdAndParentFolderIsNull(Long ownerId);
-    boolean existsByOwnerIdAndNameAndParentFolderId(Long ownerId, String name, Long parentId);
-    boolean existsByOwnerIdAndNameAndParentFolderIsNull(Long ownerId, String name);
+    List<Folder> findByOwnerIdAndParentFolderIdAndIsDeletedFalse(Long ownerId, Long parentId);
+    List<Folder> findByOwnerIdAndParentFolderIdAndIsDeleted(Long ownerId, Long parentId, boolean isDeleted);
+    List<Folder> findByOwnerIdAndParentFolderIsNullAndIsDeletedFalse(Long ownerId);
+    boolean existsByOwnerIdAndNameAndParentFolderIdAndIsDeletedFalse(Long ownerId, String name, Long parentId);
+    boolean existsByOwnerIdAndNameAndParentFolderIsNullAndIsDeletedFalse(Long ownerId, String name);
+    List<Folder> findByOwnerIdAndIsDeletedTrue(Long ownerId);
 }

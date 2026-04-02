@@ -5,16 +5,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserResponse {
-    private Long id;
-    private String fullName;
-    private String email;
-    private Long storageUsed;
-    private LocalDateTime createdAt;
+public class UploadResponseDataDto {
+    @com.fasterxml.jackson.annotation.JsonProperty("isDuplicate")
+    private boolean isDuplicate;
+    private String uploadUrl;
+    private String fileKey;
 }

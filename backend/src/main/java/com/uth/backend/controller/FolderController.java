@@ -1,6 +1,7 @@
 package com.uth.backend.controller;
 
 import com.uth.backend.dto.request.FolderCreateRequest;
+import com.uth.backend.dto.response.FolderContentResponse;
 import com.uth.backend.dto.response.FolderResponse;
 import com.uth.backend.service.FolderService;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/folders")
+@RequestMapping("/api/folders")
 @RequiredArgsConstructor
 public class FolderController {
 
@@ -22,6 +23,27 @@ public class FolderController {
             @RequestParam("userId") Long userId,
             @RequestBody FolderCreateRequest request) {
         return new ResponseEntity<>(folderService.createFolder(userId, request), HttpStatus.CREATED);
+    }
+
+    @GetMapping({"/content", "/{id}/content"})
+    public ResponseEntity<FolderContentResponse> getFolderContent(
+            @RequestParam("userId") Long userId,
+            @PathVariable(value = "id", required = false) Long folderId) {
+        return ResponseEntity.ok(folderService.getFolderContent(userId, folderId));
+    }
+
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<Void> restoreFolder(
+            @RequestParam("userId") Long userId,
+            @PathVariable("id") Long folderId) {
+        folderService.restoreFolder(userId, folderId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/trash/all")
+    public ResponseEntity<FolderContentResponse> getUnifiedTrash(
+            @RequestParam("userId") Long userId) {
+        return ResponseEntity.ok(folderService.getUnifiedTrash(userId));
     }
 
     @GetMapping

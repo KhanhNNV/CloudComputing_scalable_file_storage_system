@@ -8,8 +8,10 @@ import java.util.List;
 
 @Repository
 public interface FileRepository extends JpaRepository<File, Long> {
-    List<File> findByOwnerIdAndFolderId(Long ownerId, Long folderId);
-    List<File> findByOwnerIdAndFolderIsNull(Long ownerId);
-    boolean existsByOwnerIdAndDisplayNameAndFolderId(Long ownerId, String displayName, Long folderId);
-    boolean existsByOwnerIdAndDisplayNameAndFolderIsNull(Long ownerId, String displayName);
+    List<File> findByOwnerIdAndFolderIdAndIsDeletedFalse(Long ownerId, Long folderId);
+    List<File> findByOwnerIdAndFolderIdAndIsDeleted(Long ownerId, Long folderId, boolean isDeleted);
+    List<File> findByOwnerIdAndFolderIsNullAndIsDeletedFalse(Long ownerId);
+    boolean existsByOwnerIdAndNameAndFolderIdAndIsDeletedFalse(Long ownerId, String name, Long folderId);
+    boolean existsByOwnerIdAndNameAndFolderIsNullAndIsDeletedFalse(Long ownerId, String name);
+    List<File> findByOwnerIdAndIsDeletedTrue(Long ownerId);
 }

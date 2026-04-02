@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface StorageObjectRepository extends JpaRepository<StorageObject, Long> {
     Optional<StorageObject> findBySha256(String sha256);
+    Optional<StorageObject> findByS3Key(String s3Key);
 }
