@@ -25,6 +25,17 @@ services:
     volumes:
       - redis_data:/data
 
+  backend:
+    build: .
+    container_name: backend
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - mysql-db
+      - redis-cache
 volumes:
   mysql_data:
   redis_data:
