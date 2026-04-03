@@ -58,8 +58,11 @@ export default function UploadModal({ isOpen, onClose }) {
             if (isDuplicate) {
                 // XỬ LÝ KHỬ TRÙNG LẶP
                 setUploadProgress(100);
-                alert("Upload thành công! (File đã tồn tại, Backend tự động map)");
-                setTimeout(() => resetAndClose(), 1500);
+                // Chờ CSS chạy xong 500ms rồi mới alert
+                setTimeout(() => {
+                    alert("Upload thành công! (File đã tồn tại, Backend tự động map)");
+                    resetAndClose();
+                }, 500);
                 return;
             }
 
@@ -88,8 +91,12 @@ export default function UploadModal({ isOpen, onClose }) {
             await axiosClient.post(`/files/confirm-upload?userId=${userId}`, confirmPayload);
 
             setUploadProgress(100);
-            alert("200 OK - File saved to database.");
-            resetAndClose();
+            
+            // Lùi thời gian hiện alert lại 500ms
+            setTimeout(() => {
+                alert("200 OK - File saved to database.");
+                resetAndClose();
+            }, 500);
 
         } catch (error) {
             console.error("Lỗi trong quá trình upload:", error);
