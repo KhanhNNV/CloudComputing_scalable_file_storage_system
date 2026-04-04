@@ -1,24 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import UploadModal from '../../components/common/UploadModal';
-import { FileText, Image as ImageIcon, File as FileIcon, Plus } from 'lucide-react';
-// Import trực tiếp dữ liệu giả từ file JSON
-import dummyFiles from '../../dummyData.json'; 
+import { FileText, Image as ImageIcon, File as FileIcon, Plus, Loader2 } from 'lucide-react';
+import { fileService } from '../../services/fileService';
 
 export default function Drive() {
-  // Gán thẳng dữ liệu JSON vào state, bỏ qua bất đồng bộ (API/Promise)
-  const [files] = useState(dummyFiles);
+  const [files, setFiles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Hàm chọn icon dựa vào type file
-  const getFileIcon = (type) => {
-    switch(type) {
-      case 'pdf': return <FileText className="w-8 h-8 text-red-500" />;
-      case 'word': return <FileText className="w-8 h-8 text-blue-500" />;
-      // Đổi Image thành ImageIcon
-      case 'image': return <ImageIcon className="w-8 h-8 text-green-500" />;
-      // Đổi File thành FileIcon
-      default: return <FileIcon className="w-8 h-8 text-gray-500" />;
+  // --- HÀM MỚI: Định dạng dung lượng file linh hoạt ---
+  const formatFileSize = (bytes) => {
+    if (!bytes || bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    // Nếu là MB (i=2) thì lấy 2 chữ số thập phân, còn lại lấy 1
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(i >= 2 ? 2 : 1)) + ' ' + sizes[i];
+  };
+
+  const fetchFiles = async () => {
+    try {
+      setIsLoading(true);
+      const responseData = await fileService.getFiles(null);
+      const fileList = responseData?.data || responseData || [];
+      setFiles(fileList);
+    } catch (error) {
+      console.error("Không thể tải danh sách file:", error);
+      setFiles([]);
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchFiles();
+  }, []);
+
+  const getFileIcon = (file) => {
+    const mimeType = (file.mimeType || file.type || '').toLowerCase();
+    const name = (file.name || '').toLowerCase();
+
+    if (mimeType.includes('pdf') || name.endsWith('.pdf')) {
+      return <FileText className="w-8 h-8 text-red-500" />;
+    }
+    if (mimeType.includes('word') || mimeType.includes('document') || name.endsWith('.doc') || name.endsWith('.docx')) {
+      return <FileText className="w-8 h-8 text-blue-500" />;
+    }
+    if (mimeType.includes('image')) {
+      return <ImageIcon className="w-8 h-8 text-green-500" />;
+    }
+    return <FileIcon className="w-8 h-8 text-gray-500" />;
+  };
+
+  const isImage = (file) => {
+    const mimeType = (file.mimeType || file.type || '').toLowerCase();
+    const name = (file.name || '').toLowerCase();
+    return mimeType.includes('image') || /\.(jpg|jpeg|png|gif|webp)$/i.test(name);
   };
 
   return (
@@ -34,32 +71,62 @@ export default function Drive() {
         </button>
       </div>
 
-      {/* Hiển thị danh sách file dưới dạng Grid, thêm kiểm tra an toàn (files || []) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {(files || []).map((file) => (
-          <div key={file.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors flex flex-col items-center gap-3 shadow-sm">
-            
-            {/* THAY ĐỔI Ở ĐÂY: Logic hiển thị Thumbnail hoặc Icon */}
-            {file.type === 'image' && file.thumbnailUrl ? (
-              <img 
-                src={file.thumbnailUrl} 
-                alt={file.name} 
-                className="w-12 h-12 object-cover rounded-md shadow-sm" 
-              />
-            ) : (
-              getFileIcon(file.type)
-            )}
-            {/* KẾT THÚC THAY ĐỔI */}
-
-            <div className="text-center w-full">
-              <p className="text-sm font-medium text-gray-700 truncate" title={file.name}>{file.name}</p>
-              <p className="text-xs text-gray-500 mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+          <span className="ml-3 text-gray-500 font-medium">Đang tải dữ liệu...</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {files.length === 0 ? (
+            <div className="col-span-full text-center text-gray-500 py-10 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+              Chưa có file nào. Hãy upload file đầu tiên của bạn!
             </div>
-          </div>
-        ))}
-      </div>
+          ) : (
+            files.map((file) => (
+              <div key={file.id || file.fileId || Math.random()} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors flex flex-col items-center gap-3 shadow-sm">
+                
+                {/* --- CẬP NHẬT: Hiển thị Thumbnail thật --- */}
+                <div className="w-12 h-12 flex items-center justify-center">
+                  {isImage(file) && (file.thumbnailUrl || file.downloadUrl) ? (
+                    <img 
+                      src={file.thumbnailUrl || file.downloadUrl} 
+                      alt={file.name} 
+                      className="w-full h-full object-cover rounded-md shadow-sm border border-gray-100" 
+                      onError={(e) => {
+                        // Nếu link ảnh lỗi, quay lại hiện icon mặc định
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                  ) : null}
+                  
+                  {/* Hiện icon nếu không phải ảnh hoặc ảnh bị lỗi link */}
+                  <div style={{ display: isImage(file) && (file.thumbnailUrl || file.downloadUrl) ? 'none' : 'block' }}>
+                    {getFileIcon(file)}
+                  </div>
+                </div>
 
-      <UploadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+                <div className="text-center w-full">
+                  <p className="text-sm font-medium text-gray-700 truncate" title={file.name}>{file.name}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {/* --- CẬP NHẬT: Dùng hàm format mới --- */}
+                    {formatFileSize(file.size)}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      <UploadModal 
+        isOpen={isModalOpen} 
+        onClose={() => {
+          setIsModalOpen(false);
+          fetchFiles(); 
+        }} 
+      />
     </div>
   );
 }
