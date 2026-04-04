@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { X, FileUp } from 'lucide-react';
 import { fileService } from '../../services/fileService';
 
-// BẠN LƯU Ý: Đổi 'baseService' hoặc 'api' tùy theo tên file cấu hình axios nội bộ của nhóm bạn
-import axiosClient from '../../services/baseService'; 
-import axios from 'axios'; // Dùng axios gốc để bắn thẳng lên S3, không kèm token nội bộ
+// Đổi đường dẫn import sang file api.js chuẩn
+import api from '../../services/api';
+import axios from 'axios'; // Giữ nguyên để bắn thẳng lên S3
 
 export default function UploadModal({ isOpen, onClose }) {
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -29,36 +29,34 @@ export default function UploadModal({ isOpen, onClose }) {
             setUploadingFileName(file.name);
             setUploadProgress(0);
 
-            // Tạm fix cứng userId = 1 theo URL bạn đang test
             const userId = localStorage.getItem('userId') || 1;
 
             // ==========================================
-            // BƯỚC 0: TÍNH TOÁN SHA-256 (Do Thành viên 3 làm)
+            // BƯỚC 0: TÍNH TOÁN SHA-256
             // ==========================================
             console.log("%c [Worker] Đang băm file...", "color: #3b82f6; font-weight: bold;");
             const hash = await fileService.calculateFileHash(file);
             console.log("%c ===> SHA-256: " + hash, "color: #10b981; font-weight: bold; font-size: 14px;");
 
             // ==========================================
-            // BƯỚC 1: XIN VÉ (Theo chuẩn API Contract)
+            // BƯỚC 1: XIN VÉ (Sử dụng api để có refreshToken)
             // ==========================================
             const requestPayload = {
                 fileName: file.name,
                 fileSize: file.size,
                 contentType: file.type || 'application/octet-stream',
-                // NẾU BE BÁO LỖI 500 Ở ĐÂY: Có thể do BE khai báo folderId là kiểu 'long' nguyên thủy (không cho phép null). 
-                // Tạm thời để null, nếu lỗi bạn thử đổi thành 0 hoặc 1.
-                folderId: null, 
+                folderId: null, // Đã fix thành null
                 sha256: hash
             };
 
-            const requestRes = await axiosClient.post(`/files/request-upload?userId=${userId}`, requestPayload);
-            const { isDuplicate, uploadUrl, fileKey } = requestRes.data.data;
+            // Đã thêm /api vào đường dẫn
+            const requestRes = await api.post(`/api/files/request-upload?userId=${userId}`, requestPayload);
+            
+            const responseData = requestRes.data?.data || requestRes.data; 
+            const { isDuplicate, uploadUrl, fileKey } = responseData;
 
             if (isDuplicate) {
-                // XỬ LÝ KHỬ TRÙNG LẶP
                 setUploadProgress(100);
-                // Chờ CSS chạy xong 500ms rồi mới alert
                 setTimeout(() => {
                     alert("Upload thành công! (File đã tồn tại, Backend tự động map)");
                     resetAndClose();
@@ -67,7 +65,7 @@ export default function UploadModal({ isOpen, onClose }) {
             }
 
             // ==========================================
-            // BƯỚC 2: BẮN FILE LÊN AWS S3
+            // BƯỚC 2: BẮN FILE LÊN AWS S3 (Giữ nguyên axios gốc)
             // ==========================================
             await axios.put(uploadUrl, file, {
                 headers: {
@@ -80,19 +78,19 @@ export default function UploadModal({ isOpen, onClose }) {
             });
 
             // ==========================================
-            // BƯỚC 3: BÁO CÁO (Theo chuẩn API Contract)
+            // BƯỚC 3: BÁO CÁO (Sử dụng api để có refreshToken)
             // ==========================================
             const confirmPayload = {
                 fileKey: fileKey,
                 fileName: file.name,
-                folderId: null
+                folderId: null // Đã fix thành null
             };
             
-            await axiosClient.post(`/files/confirm-upload?userId=${userId}`, confirmPayload);
+            // Đã thêm /api vào đường dẫn
+            await api.post(`/api/files/confirm-upload?userId=${userId}`, confirmPayload);
 
             setUploadProgress(100);
             
-            // Lùi thời gian hiện alert lại 500ms
             setTimeout(() => {
                 alert("200 OK - File saved to database.");
                 resetAndClose();
