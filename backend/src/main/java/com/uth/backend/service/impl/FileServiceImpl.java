@@ -282,6 +282,20 @@ public class FileServiceImpl implements FileService {
     }
 
     private FileResponse mapToResponse(File file) {
+        String downloadUrl = null;
+        String thumbnailUrl = null;
+
+        if (file.getStorageObject() != null && file.getStorageObject().getS3Key() != null) {
+            String s3Key = file.getStorageObject().getS3Key();
+            String mimeType = file.getStorageObject().getMimeType();
+
+            downloadUrl = s3Service.generateDownloadPresignedUrl(s3Key, file.getName());
+            if (mimeType != null && mimeType.toLowerCase().startsWith("image/")) {
+                String thumbKey = s3Key.replaceFirst("users/", "thumbnails/");
+                thumbnailUrl = s3Service.generateDownloadPresignedUrl(thumbKey, "thumb_" + file.getName());
+            }
+        }
+
         return FileResponse.builder()
                 .id(file.getId())
                 .name(file.getName())
@@ -292,6 +306,8 @@ public class FileServiceImpl implements FileService {
                 .mimeType(file.getStorageObject() != null ? file.getStorageObject().getMimeType() : null)
                 .isDeleted(file.isDeleted())
                 .createdAt(file.getCreatedAt())
+                .downloadUrl(downloadUrl)
+                .thumbnailUrl(thumbnailUrl)
                 .build();
     }
 }
