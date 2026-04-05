@@ -21,4 +21,6 @@ public class FileResponse {
     private String mimeType;
     private boolean isDeleted;
     private LocalDateTime createdAt;
+    private String downloadUrl;
+    private String thumbnailUrl;
 }
