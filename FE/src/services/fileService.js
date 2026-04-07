@@ -6,7 +6,7 @@ export const fileService = {
         try {
             const userId = localStorage.getItem('userId') || 1;
             
-            const params = { userId };
+            const params = { };
             if (folderId) {
                 params.folderId = folderId;
             }

@@ -13,6 +13,7 @@ import com.uth.backend.model.User;
 import com.uth.backend.repository.FileRepository;
 import com.uth.backend.repository.FolderRepository;
 import com.uth.backend.repository.StorageObjectRepository;
+import com.uth.backend.repository.UserRepository;
 import com.uth.backend.service.FileService;
 import com.uth.backend.service.S3Service;
 import com.uth.backend.service.UserService;
@@ -33,6 +34,7 @@ public class FileServiceImpl implements FileService {
     private final FolderRepository folderRepository;
     private final StorageObjectRepository storageObjectRepository;
     private final S3Service s3Service;
+    private final UserRepository userRepository;
 
     @Override
     public FileResponse createFile(Long ownerId, FileCreateRequest request) {
@@ -70,8 +72,9 @@ public class FileServiceImpl implements FileService {
     
     @Override
     @Transactional
-    public UploadResponseDto requestUpload(Long ownerId, UploadRequestDto request) {
-        User owner = userService.getUserEntityById(ownerId);
+    public UploadResponseDto requestUpload(String email, UploadRequestDto request) {
+
+        User owner = userRepository.findByEmail(email).orElseThrow(()-> new RuntimeException("Không tìm thấy user"));
         
         Optional<StorageObject> optionalStorage = storageObjectRepository.findBySha256(request.getSha256());
         if (optionalStorage.isPresent()) {
@@ -102,7 +105,7 @@ public class FileServiceImpl implements FileService {
                         .build();
             }
         } else {
-            String fileKey = "users/" + ownerId + "/" + System.currentTimeMillis() + "-" + request.getFileName();
+            String fileKey = "users/" + owner.getId() + "/" + System.currentTimeMillis() + "-" + request.getFileName();
             String presignedUrl = s3Service.generatePresignedUrl(fileKey, request.getContentType());
             
             // Lưu StorageObject với trạng thái 'uploading'
@@ -127,8 +130,8 @@ public class FileServiceImpl implements FileService {
 
     @Override
     @Transactional
-    public void confirmUpload(Long ownerId, ConfirmUploadRequestDto request) {
-        User owner = userService.getUserEntityById(ownerId);
+    public void confirmUpload(String email, ConfirmUploadRequestDto request) {
+        User owner = userRepository.findByEmail(email).orElseThrow(()-> new RuntimeException("Không tìm thấy user"));
         StorageObject storageObject = storageObjectRepository.findByS3Key(request.getFileKey())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đối tượng lưu trữ cho khóa đã cung cấp"));
                 
@@ -165,7 +168,10 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public List<FileResponse> getFilesByFolder(Long ownerId, Long folderId) {
+    public List<FileResponse> getFilesByFolder(String email, Long folderId) {
+        User owner = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
         List<File> files;
         if (folderId == null) {
             files = fileRepository.findByOwnerIdAndFolderIsNullAndIsDeletedFalse(ownerId);

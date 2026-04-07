@@ -10,10 +10,10 @@ import java.util.List;
 
 public interface FileService {
     FileResponse createFile(Long ownerId, FileCreateRequest request);
-    List<FileResponse> getFilesByFolder(Long ownerId, Long folderId);
+    List<FileResponse> getFilesByFolder(String email, Long folderId);
     void deleteFile(Long ownerId, Long fileId);
-    UploadResponseDto requestUpload(Long ownerId, UploadRequestDto requestDto);
-    void confirmUpload(Long ownerId, ConfirmUploadRequestDto requestDto);
+    UploadResponseDto requestUpload(String email, UploadRequestDto requestDto);
+    void confirmUpload(String email, ConfirmUploadRequestDto requestDto);
     String getFileDownloadUrl(Long ownerId, Long fileId);
     List<FileResponse> getTrashFiles(Long ownerId);
     void restoreFile(Long ownerId, Long fileId);
