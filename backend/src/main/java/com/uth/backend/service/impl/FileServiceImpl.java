@@ -37,8 +37,9 @@ public class FileServiceImpl implements FileService {
     private final UserRepository userRepository;
 
     @Override
-    public FileResponse createFile(Long ownerId, FileCreateRequest request) {
-        User owner = userService.getUserEntityById(ownerId);
+    public FileResponse createFile(String email, FileCreateRequest request) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
         
         Folder folder = null;
         if (request.getFolderId() != null) {
@@ -182,7 +183,9 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public void deleteFile(Long ownerId, Long fileId) {
+    public void deleteFile(String email, Long fileId) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tệp"));
         
@@ -196,7 +199,9 @@ public class FileServiceImpl implements FileService {
     
     @Override
     @Transactional
-    public void deleteFilesByFolder(Long ownerId, Long folderId) {
+    public void deleteFilesByFolder(String email, Long folderId) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
         List<File> files = fileRepository.findByOwnerIdAndFolderIdAndIsDeletedFalse(ownerId, folderId);
         for (File file : files) {
             file.setDeleted(true);
@@ -205,7 +210,9 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public String getFileDownloadUrl(Long ownerId, Long fileId) {
+    public String getFileDownloadUrl(String email, Long fileId) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tệp"));
 
@@ -221,14 +228,18 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public List<FileResponse> getTrashFiles(Long ownerId) {
+    public List<FileResponse> getTrashFiles(String email) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
         List<File> files = fileRepository.findByOwnerIdAndIsDeletedTrue(ownerId);
         return files.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public void restoreFile(Long ownerId, Long fileId) {
+    public void restoreFile(String email, Long fileId) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
         File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tệp"));
         
@@ -251,12 +262,14 @@ public class FileServiceImpl implements FileService {
     
     @Override
     @Transactional
-    public void restoreFilesByFolder(Long ownerId, Long folderId) {
+    public void restoreFilesByFolder(String email, Long folderId) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
         List<File> files = fileRepository.findByOwnerIdAndIsDeletedTrue(ownerId);
         // Ở đây chúng ta chỉ khôi phục các file trỏ vào folder này
         for (File file : files) {
             if (file.getFolder() != null && file.getFolder().getId().equals(folderId)) {
-                restoreFile(ownerId, file.getId());
+                restoreFile(email, file.getId());
             }
         }
     }

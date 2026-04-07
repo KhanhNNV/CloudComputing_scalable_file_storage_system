@@ -7,6 +7,8 @@ import com.uth.backend.service.FolderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,44 +22,44 @@ public class FolderController {
 
     @PostMapping
     public ResponseEntity<FolderResponse> createFolder(
-            @RequestParam("userId") Long userId,
             @RequestBody FolderCreateRequest request) {
-        return new ResponseEntity<>(folderService.createFolder(userId, request), HttpStatus.CREATED);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return new ResponseEntity<>(folderService.createFolder(authentication.getName(), request), HttpStatus.CREATED);
     }
 
     @GetMapping({"/content", "/{id}/content"})
     public ResponseEntity<FolderContentResponse> getFolderContent(
-            @RequestParam("userId") Long userId,
             @PathVariable(value = "id", required = false) Long folderId) {
-        return ResponseEntity.ok(folderService.getFolderContent(userId, folderId));
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return ResponseEntity.ok(folderService.getFolderContent(authentication.getName(), folderId));
     }
 
     @PostMapping("/{id}/restore")
     public ResponseEntity<Void> restoreFolder(
-            @RequestParam("userId") Long userId,
             @PathVariable("id") Long folderId) {
-        folderService.restoreFolder(userId, folderId);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        folderService.restoreFolder(authentication.getName(), folderId);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/trash/all")
-    public ResponseEntity<FolderContentResponse> getUnifiedTrash(
-            @RequestParam("userId") Long userId) {
-        return ResponseEntity.ok(folderService.getUnifiedTrash(userId));
+    public ResponseEntity<FolderContentResponse> getUnifiedTrash() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return ResponseEntity.ok(folderService.getUnifiedTrash(authentication.getName()));
     }
 
     @GetMapping
     public ResponseEntity<List<FolderResponse>> getFolders(
-            @RequestParam("userId") Long userId,
             @RequestParam(value = "parentId", required = false) Long parentId) {
-        return ResponseEntity.ok(folderService.getFoldersByParent(userId, parentId));
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return ResponseEntity.ok(folderService.getFoldersByParent(authentication.getName(), parentId));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteFolder(
-            @RequestParam("userId") Long userId,
             @PathVariable("id") Long folderId) {
-        folderService.deleteFolder(userId, folderId);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        folderService.deleteFolder(authentication.getName(), folderId);
         return ResponseEntity.noContent().build();
     }
 }

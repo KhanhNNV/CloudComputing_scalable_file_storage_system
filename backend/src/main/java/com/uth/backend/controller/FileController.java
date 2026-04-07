@@ -24,9 +24,9 @@ public class FileController {
 
     @PostMapping
     public ResponseEntity<FileResponse> createFileMetadata(
-            @RequestParam("userId") Long userId,
             @RequestBody FileCreateRequest request) {
-        return new ResponseEntity<>(fileService.createFile(userId, request), HttpStatus.CREATED);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return new ResponseEntity<>(fileService.createFile(authentication.getName(), request), HttpStatus.CREATED);
     }
 
     @GetMapping
@@ -54,24 +54,24 @@ public class FileController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteFile(
-            @RequestParam("userId") Long userId,
             @PathVariable("id") Long fileId) {
-        fileService.deleteFile(userId, fileId);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        fileService.deleteFile(authentication.getName(), fileId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/download-url")
     public ResponseEntity<String> getFileDownloadUrl(
-            @RequestParam("userId") Long userId,
             @PathVariable("id") Long fileId) {
-        return ResponseEntity.ok(fileService.getFileDownloadUrl(userId, fileId));
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return ResponseEntity.ok(fileService.getFileDownloadUrl(authentication.getName(), fileId));
     }
 
     @PostMapping("/{id}/restore")
     public ResponseEntity<Void> restoreFile(
-            @RequestParam("userId") Long userId,
             @PathVariable("id") Long fileId) {
-        fileService.restoreFile(userId, fileId);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        fileService.restoreFile(authentication.getName(), fileId);
         return ResponseEntity.ok().build();
     }
 }

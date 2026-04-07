@@ -9,6 +9,7 @@ import com.uth.backend.model.Folder;
 import com.uth.backend.model.User;
 import com.uth.backend.repository.FileRepository;
 import com.uth.backend.repository.FolderRepository;
+import com.uth.backend.repository.UserRepository;
 import com.uth.backend.service.FolderService;
 import com.uth.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -25,10 +26,12 @@ public class FolderServiceImpl implements FolderService {
     private final FolderRepository folderRepository;
     private final UserService userService;
     private final FileRepository fileRepository;
+    private final UserRepository userRepository;
 
     @Override
-    public FolderResponse createFolder(Long ownerId, FolderCreateRequest request) {
-        User owner = userService.getUserEntityById(ownerId);
+    public FolderResponse createFolder(String email, FolderCreateRequest request) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
         Folder parentFolder = null;
         if (request.getParentId() != null) {
             parentFolder = folderRepository.findById(request.getParentId())
@@ -54,7 +57,9 @@ public class FolderServiceImpl implements FolderService {
     }
 
     @Override
-    public List<FolderResponse> getFoldersByParent(Long ownerId, Long parentId) {
+    public List<FolderResponse> getFoldersByParent(String email, Long parentId) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
         List<Folder> folders;
         if (parentId == null) {
             folders = folderRepository.findByOwnerIdAndParentFolderIsNullAndIsDeletedFalse(ownerId);
@@ -66,7 +71,9 @@ public class FolderServiceImpl implements FolderService {
 
     @Override
     @Transactional
-    public void deleteFolder(Long ownerId, Long folderId) {
+    public void deleteFolder(String email, Long folderId) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
         Folder folder = folderRepository.findById(folderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thư mục"));
         
@@ -88,19 +95,23 @@ public class FolderServiceImpl implements FolderService {
         // 3. Đệ quy xóa các Folder con bên trong
         List<Folder> subFolders = folderRepository.findByOwnerIdAndParentFolderIdAndIsDeletedFalse(ownerId, folderId);
         for (Folder sub : subFolders) {
-            deleteFolder(ownerId, sub.getId());
+            deleteFolder(email, sub.getId());
         }
     }
 
     @Override
-    public List<FolderResponse> getTrashFolders(Long ownerId) {
+    public List<FolderResponse> getTrashFolders(String email) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
         List<Folder> folders = folderRepository.findByOwnerIdAndIsDeletedTrue(ownerId);
         return folders.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public void restoreFolder(Long ownerId, Long folderId) {
+    public void restoreFolder(String email, Long folderId) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
         Folder folder = folderRepository.findById(folderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thư mục"));
         
@@ -136,7 +147,7 @@ public class FolderServiceImpl implements FolderService {
         List<Folder> subFolders = folderRepository.findByOwnerIdAndIsDeletedTrue(ownerId);
         for (Folder sub : subFolders) {
             if (sub.getParentFolder() != null && sub.getParentFolder().getId().equals(folderId)) {
-                restoreFolder(ownerId, sub.getId());
+                restoreFolder(email, sub.getId());
             }
         }
     }
@@ -160,7 +171,9 @@ public class FolderServiceImpl implements FolderService {
     }
 
     @Override
-    public FolderContentResponse getFolderContent(Long ownerId, Long folderId) {
+    public FolderContentResponse getFolderContent(String email, Long folderId) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
         // Kiểm tra xem folder hiện tại có đang bị xóa không
         boolean isCurrentFolderDeleted = false;
         if (folderId != null) {
@@ -198,7 +211,9 @@ public class FolderServiceImpl implements FolderService {
     }
 
     @Override
-    public FolderContentResponse getUnifiedTrash(Long ownerId) {
+    public FolderContentResponse getUnifiedTrash(String email) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
         // 1. Lấy toàn bộ Folder đã xóa
         List<Folder> allDeletedFolders = folderRepository.findByOwnerIdAndIsDeletedTrue(ownerId);
         
