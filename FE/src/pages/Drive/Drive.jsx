@@ -1,19 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import UploadModal from '../../components/common/UploadModal';
 import CreateFolderModal from "../../components/common/CreateFolderModal";
-import { FileText, Image as ImageIcon, File as FileIcon, Plus, Loader2, FolderPlus, Folder } from 'lucide-react';
+import { FileText, Image as ImageIcon, File as FileIcon, Plus, Loader2, FolderPlus, Folder, ChevronRight } from 'lucide-react';
 import { fileService } from '../../services/fileService';
-import { folderService } from '../../services/folderService'; // Đảm bảo đã import folderService
+import { folderService } from '../../services/folderService';
 
 export default function Drive() {
   const [files, setFiles] = useState([]);
-  const [folders, setFolders] = useState([]); // State mới để chứa danh sách thư mục
+  const [folders, setFolders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // State mới cho tính năng Tạo thư mục
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
-  const [currentFolderId, setCurrentFolderId] = useState(null); // null nghĩa là đang ở thư mục gốc (Root)
+
+  // ==========================================
+  // CẬP NHẬT 2: LOGIC THANH ĐIỀU HƯỚNG (BREADCRUMB)
+  // ==========================================
+  // Thay vì chỉ lưu currentFolderId, ta lưu cả đoạn đường đi (path)
+  const [folderPath, setFolderPath] = useState([{ id: null, name: 'My Drive' }]);
+  
+  // currentFolderId bây giờ sẽ tự động lấy ID của thư mục cuối cùng trong đoạn đường đi
+  const currentFolderId = folderPath[folderPath.length - 1].id;
+
+  // Khi bấm vào một thư mục để đi vào trong
+  const handleEnterFolder = (folder) => {
+    const folderId = folder.id || folder.folderId;
+    setFolderPath([...folderPath, { id: folderId, name: folder.name }]);
+  };
+
+  // Khi bấm vào một chữ trên thanh điều hướng để quay lại
+  const handleBreadcrumbClick = (index) => {
+    // Cắt mảng từ đầu đến vị trí được click
+    const newPath = folderPath.slice(0, index + 1);
+    setFolderPath(newPath);
+  };
+  // ==========================================
 
   const formatFileSize = (bytes) => {
     if (!bytes || bytes === 0) return '0 Bytes';
@@ -23,25 +43,17 @@ export default function Drive() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(i >= 2 ? 2 : 1)) + ' ' + sizes[i];
   };
 
-  // CẬP NHẬT: Hàm fetchData lấy cả thư mục và file
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      
-      // Gọi API lấy thông tin file (đã có)
       const filesResponse = await fileService.getFiles(currentFolderId);
       setFiles(filesResponse?.data || filesResponse || []);
 
-      // Gọi API lấy thông tin thư mục (Dựa vào API GET /api/folders của backend)
-      // Nếu folderService có hàm getFolderContent, bạn có thể gọi hàm đó.
-      // Ở đây tôi dùng cách lấy thư mục an toàn qua API content hoặc endpoint getFolders:
       const foldersResponse = await folderService.getFolderContent(currentFolderId);
-      // Giả sử API trả về object có thuộc tính 'folders'
       setFolders(foldersResponse?.data?.folders || foldersResponse?.folders || []);
       
     } catch (error) {
       console.error("Không thể tải danh sách dữ liệu:", error);
-      // Tránh việc văng lỗi trắng trang
       if (files.length === 0) setFiles([]);
       if (folders.length === 0) setFolders([]);
     } finally {
@@ -49,7 +61,6 @@ export default function Drive() {
     }
   };
 
-  // Mỗi khi currentFolderId thay đổi (người dùng bấm vào folder), sẽ tự động gọi lại fetchData
   useEffect(() => {
     fetchData();
   }, [currentFolderId]);
@@ -79,9 +90,28 @@ export default function Drive() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">My Drive</h1>
         
-        {/* Nhóm các nút hành động */}
+        {/* CẬP NHẬT 3: GIAO DIỆN THANH ĐIỀU HƯỚNG */}
+        <div className="flex items-center flex-wrap gap-1 text-2xl font-bold">
+          {folderPath.map((folder, index) => (
+            <React.Fragment key={folder.id || `breadcrumb-${index}`}>
+              <button
+                onClick={() => handleBreadcrumbClick(index)}
+                className={`hover:text-blue-600 transition-colors focus:outline-none ${
+                  index === folderPath.length - 1 ? 'text-gray-800' : 'text-gray-500'
+                }`}
+              >
+                {folder.name}
+              </button>
+              
+              {/* Hiển thị mũi tên nếu chưa phải là thư mục cuối cùng */}
+              {index < folderPath.length - 1 && (
+                <ChevronRight className="w-6 h-6 text-gray-400 mt-1" />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+
         <div className="flex gap-3">
           <button 
             onClick={() => setIsCreateFolderOpen(true)}
@@ -113,11 +143,11 @@ export default function Drive() {
             </div>
           ) : (
             <>
-              {/* --- VÙNG HIỂN THỊ THƯ MỤC --- */}
               {folders.map((folder) => (
                 <div 
                   key={`folder-${folder.id || folder.folderId || Math.random()}`} 
-                  onClick={() => setCurrentFolderId(folder.id || folder.folderId)} // Bấm vào để vào trong thư mục
+                  // CẬP NHẬT 4: Gọi hàm handleEnterFolder khi click vào thư mục
+                  onClick={() => handleEnterFolder(folder)} 
                   className="border border-gray-200 rounded-lg p-4 hover:bg-gray-100 cursor-pointer transition-colors flex items-center gap-3 shadow-sm bg-white"
                 >
                   <div className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full">
@@ -129,7 +159,6 @@ export default function Drive() {
                 </div>
               ))}
 
-              {/* --- VÙNG HIỂN THỊ FILE --- */}
               {files.map((file) => (
                 <div key={`file-${file.id || file.fileId || Math.random()}`} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors flex flex-col items-center gap-3 shadow-sm bg-white">
                   <div className="w-12 h-12 flex items-center justify-center">
@@ -163,23 +192,21 @@ export default function Drive() {
         </div>
       )}
 
-      {/* Modal Upload File */}
       <UploadModal 
         isOpen={isModalOpen} 
         onClose={() => {
           setIsModalOpen(false);
-          fetchData(); // Load lại data sau khi upload xong
+          fetchData();
         }} 
-        currentFolderId={currentFolderId} // Truyền ID thư mục hiện tại vào Upload
+        currentFolderId={currentFolderId}
       />
 
-      {/* Modal Tạo Thư mục mới */}
       <CreateFolderModal 
         isOpen={isCreateFolderOpen} 
         onClose={() => setIsCreateFolderOpen(false)} 
         currentFolderId={currentFolderId}
         onSuccess={() => {
-          fetchData(); // Tải lại danh sách sau khi tạo xong
+          fetchData();
         }} 
       />
     </div>
