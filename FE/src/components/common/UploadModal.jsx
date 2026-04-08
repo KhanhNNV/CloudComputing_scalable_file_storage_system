@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
 import { X, FileUp } from 'lucide-react';
 import { fileService } from '../../services/fileService';
+import axios from 'axios'; // Giữ lại axios để bắn file trực tiếp lên S3 qua presigned URL
 
-// Đổi đường dẫn import sang file api.js chuẩn
-import api from '../../services/api';
-import axios from 'axios'; // Giữ nguyên để bắn thẳng lên S3
-
-export default function UploadModal({ isOpen, onClose }) {
+export default function UploadModal({ isOpen, onClose, currentFolderId }) {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadingFileName, setUploadingFileName] = useState('');
     const [isUploading, setIsUploading] = useState(false);
@@ -29,31 +26,23 @@ export default function UploadModal({ isOpen, onClose }) {
             setUploadingFileName(file.name);
             setUploadProgress(0);
 
-            const userId = localStorage.getItem('userId') || 1;
-
-            // ==========================================
             // BƯỚC 0: TÍNH TOÁN SHA-256
-            // ==========================================
             console.log("%c [Worker] Đang băm file...", "color: #3b82f6; font-weight: bold;");
             const hash = await fileService.calculateFileHash(file);
             console.log("%c ===> SHA-256: " + hash, "color: #10b981; font-weight: bold; font-size: 14px;");
 
-            // ==========================================
-            // BƯỚC 1: XIN VÉ (Sử dụng api để có refreshToken)
-            // ==========================================
+            // BƯỚC 1: XIN VÉ UPLOAD
             const requestPayload = {
                 fileName: file.name,
                 fileSize: file.size,
                 contentType: file.type || 'application/octet-stream',
-                folderId: null, // Đã fix thành null
+                folderId: currentFolderId, // CẬP NHẬT: Truyền ID thực tế thay vì null
                 sha256: hash
             };
 
-            // Đã thêm /api vào đường dẫn
-            const requestRes = await api.post(`/api/files/request-upload?userId=${userId}`, requestPayload);
-            
-            const responseData = requestRes.data?.data || requestRes.data; 
-            const { isDuplicate, uploadUrl, fileKey } = responseData;
+            const responseData = await fileService.requestUpload(requestPayload);
+            const result = responseData.data || responseData;
+            const { isDuplicate, uploadUrl, fileKey } = result;
 
             if (isDuplicate) {
                 setUploadProgress(100);
@@ -64,9 +53,7 @@ export default function UploadModal({ isOpen, onClose }) {
                 return;
             }
 
-            // ==========================================
-            // BƯỚC 2: BẮN FILE LÊN AWS S3 (Giữ nguyên axios gốc)
-            // ==========================================
+            // BƯỚC 2: BẮN FILE LÊN AWS S3 
             await axios.put(uploadUrl, file, {
                 headers: {
                     'Content-Type': file.type || 'application/octet-stream'
@@ -77,28 +64,26 @@ export default function UploadModal({ isOpen, onClose }) {
                 }
             });
 
-            // ==========================================
-            // BƯỚC 3: BÁO CÁO (Sử dụng api để có refreshToken)
-            // ==========================================
+            // BƯỚC 3: XÁC NHẬN HOÀN TẤT VỚI BACKEND
             const confirmPayload = {
                 fileKey: fileKey,
                 fileName: file.name,
-                folderId: null // Đã fix thành null
+                folderId: currentFolderId // CẬP NHẬT: Truyền ID thực tế thay vì null
             };
             
-            // Đã thêm /api vào đường dẫn
-            await api.post(`/api/files/confirm-upload?userId=${userId}`, confirmPayload);
+            await fileService.confirmUpload(confirmPayload);
 
             setUploadProgress(100);
             
             setTimeout(() => {
-                alert("200 OK - File saved to database.");
+                alert("Upload thành công! File đã lưu vào Database.");
                 resetAndClose();
             }, 500);
 
         } catch (error) {
             console.error("Lỗi trong quá trình upload:", error);
-            alert("Đã xảy ra lỗi khi upload file. Vui lòng kiểm tra Console!");
+            const errorMsg = error.response?.data?.message || "Đã xảy ra lỗi khi upload file. Vui lòng thử lại!";
+            alert(errorMsg);
             resetAndClose();
         }
     };
