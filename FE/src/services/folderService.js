@@ -49,5 +49,15 @@ export const folderService = {
             console.error("Lỗi khi lấy dữ liệu thùng rác:", error);
             throw error;
         }
+    },
+
+    restoreFolder: async (folderId) => {
+        try {
+            const response = await api.post(`/api/folders/${folderId}/restore`);
+            return response.data;
+        } catch (error) {
+            console.error("Lỗi khi khôi phục thư mục:", error);
+            throw error;
+        }
     }
 };

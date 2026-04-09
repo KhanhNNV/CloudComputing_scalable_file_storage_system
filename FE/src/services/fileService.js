@@ -70,5 +70,15 @@ export const fileService = {
             console.error("Lỗi khi lấy link tải file:", error);
             throw error;
         }
+    },
+    
+    restoreFile: async (fileId) => {
+        try {
+            const response = await api.post(`/api/files/${fileId}/restore`);
+            return response.data;
+        } catch (error) {
+            console.error("Lỗi khi khôi phục file:", error);
+            throw error;
+        }
     }
 };
