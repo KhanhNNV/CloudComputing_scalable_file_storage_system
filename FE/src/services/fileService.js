@@ -71,7 +71,7 @@ export const fileService = {
             throw error;
         }
     },
-    
+
     restoreFile: async (fileId) => {
         try {
             const response = await api.post(`/api/files/${fileId}/restore`);
@@ -80,5 +80,11 @@ export const fileService = {
             console.error("Lỗi khi khôi phục file:", error);
             throw error;
         }
+    },
+
+    deleteFile: async (fileId) => 
+    {
+    const response = await api.delete(`/api/files/${fileId}`);
+    return response.data;
     }
 };

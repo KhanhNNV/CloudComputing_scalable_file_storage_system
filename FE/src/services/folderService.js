@@ -59,5 +59,11 @@ export const folderService = {
             console.error("Lỗi khi khôi phục thư mục:", error);
             throw error;
         }
+    },
+
+    deleteFolder: async (folderId) => 
+    {
+    const response = await api.delete(`/api/folders/${folderId}`);
+    return response.data;
     }
 };
