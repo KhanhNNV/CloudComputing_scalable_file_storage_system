@@ -19,6 +19,7 @@ import java.time.Duration;
 public class S3ServiceImpl implements S3Service {
 
     private final S3Presigner s3Presigner;
+    private final software.amazon.awssdk.services.s3.S3Client s3Client;
 
     @Value("${aws.s3.bucket-name}")
     private String bucketName;
@@ -55,5 +56,17 @@ public class S3ServiceImpl implements S3Service {
 
         PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(presignRequest);
         return presignedRequest.url().toString();
+    }
+
+    @Override
+    public void deleteFileFromS3(String fileKey) {
+        if (fileKey == null || fileKey.isEmpty()) {
+            return;
+        }
+        software.amazon.awssdk.services.s3.model.DeleteObjectRequest deleteRequest = software.amazon.awssdk.services.s3.model.DeleteObjectRequest.builder()
+                .bucket(bucketName)
+                .key(fileKey)
+                .build();
+        s3Client.deleteObject(deleteRequest);
     }
 }

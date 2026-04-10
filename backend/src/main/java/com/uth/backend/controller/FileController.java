@@ -60,6 +60,14 @@ public class FileController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{id}/force")
+    public ResponseEntity<Void> forceDeleteFile(
+            @PathVariable("id") Long fileId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        fileService.forceDeleteFile(authentication.getName(), fileId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{id}/download-url")
     public ResponseEntity<String> getFileDownloadUrl(
             @PathVariable("id") Long fileId) {

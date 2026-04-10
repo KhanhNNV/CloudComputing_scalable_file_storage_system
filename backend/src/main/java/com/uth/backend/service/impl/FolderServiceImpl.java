@@ -10,6 +10,7 @@ import com.uth.backend.model.User;
 import com.uth.backend.repository.FileRepository;
 import com.uth.backend.repository.FolderRepository;
 import com.uth.backend.repository.UserRepository;
+import com.uth.backend.service.FileService;
 import com.uth.backend.service.FolderService;
 import com.uth.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class FolderServiceImpl implements FolderService {
     private final UserService userService;
     private final FileRepository fileRepository;
     private final UserRepository userRepository;
+    private final FileService fileService;
 
     @Override
     public FolderResponse createFolder(String email, FolderCreateRequest request) {
@@ -261,5 +263,39 @@ public class FolderServiceImpl implements FolderService {
                 .createdAt(folder.getCreatedAt())
                 .isDeleted(folder.isDeleted())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public void forceDeleteFolder(String email, Long folderId) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
+        Folder folder = folderRepository.findById(folderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thư mục"));
+
+        if (!folder.getOwner().getId().equals(ownerId)) {
+            throw new RuntimeException("Truy cập bị từ chối");
+        }
+
+        // 1. Force delete tất cả các File con (ở cả dạng deleted và chưa deleted)
+        // fileService.forceDeleteFile() đã có logic lo liệu khoản StorageObject và S3, cho nên cứ gọi foreach
+        List<File> files = fileRepository.findByOwnerIdAndFolderIdAndIsDeleted(ownerId, folderId, false);
+        files.addAll(fileRepository.findByOwnerIdAndFolderIdAndIsDeleted(ownerId, folderId, true));
+        // Lấy lại danh sách file không cần phân biệt isDeleted, ta có thể dùng findAll... nhưng chúng ta đã có list.
+        // Thực chất tốt nhất là fetch lại 1 lượt tất cả File trỏ tới folder này, không quan tâm isDeleted
+        // Ở đây tận dụng 2 query có sẵn (isDeleted=false và isDeleted=true) vì hiện tại trong bảng boolean chỉ mang 2 giá trị này.
+        for (File file : files) {
+            fileService.forceDeleteFile(email, file.getId());
+        }
+
+        // 2. Đệ quy force delete tất cả Folder con
+        List<Folder> subFolders = folderRepository.findByOwnerIdAndParentFolderIdAndIsDeleted(ownerId, folderId, false);
+        subFolders.addAll(folderRepository.findByOwnerIdAndParentFolderIdAndIsDeleted(ownerId, folderId, true));
+        for (Folder sub : subFolders) {
+            forceDeleteFolder(email, sub.getId());
+        }
+
+        // 3. Cuối cùng xoá bản ghi chính Folder này
+        folderRepository.delete(folder);
     }
 }

@@ -329,4 +329,37 @@ public class FileServiceImpl implements FileService {
                 .thumbnailUrl(thumbnailUrl)
                 .build();
     }
+
+    @Override
+    @Transactional
+    public void forceDeleteFile(String email, Long fileId) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        Long ownerId = owner.getId();
+        File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tệp"));
+        
+        if (!file.getOwner().getId().equals(ownerId)) {
+            throw new RuntimeException("Truy cập bị từ chối");
+        }
+
+        StorageObject storageObject = file.getStorageObject();
+        
+        // Xoá bản ghi file
+        fileRepository.delete(file);
+
+        // Kiểm tra xem storage object còn bị tham chiếu bởi file nào khác không
+        if (storageObject != null) {
+            boolean isReferenced = fileRepository.existsByStorageObjectIdAndIdNot(storageObject.getId(), fileId);
+            if (!isReferenced) {
+                // Xoá vật lý trên S3
+                s3Service.deleteFileFromS3(storageObject.getS3Key());
+                if (storageObject.getMimeType() != null && storageObject.getMimeType().toLowerCase().startsWith("image/")) {
+                    String thumbKey = storageObject.getS3Key().replaceFirst("users/", "thumbnails/");
+                    s3Service.deleteFileFromS3(thumbKey);
+                }
+                // Xoá storage object
+                storageObjectRepository.delete(storageObject);
+            }
+        }
+    }
 }
