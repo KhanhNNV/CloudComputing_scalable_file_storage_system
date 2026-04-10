@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Cloud } from 'lucide-react';
+import { Cloud, Eye, EyeOff } from 'lucide-react'; // Thêm Eye, EyeOff
 import authService from '../../services/authService';
 
 export default function Register() {
@@ -8,6 +8,7 @@ export default function Register() {
   const [formData, setFormData] = useState({ fullName: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // State quản lý ẩn/hiện
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -29,8 +30,6 @@ export default function Register() {
     }
   };
 
-  // Giao diện y hệt như tôi đã gửi ở tin nhắn trước, chỉ khác phần xử lý logic ở trên thôi nhé
-  // (Bạn có thể copy phần return (...) của file Register ở tin nhắn trước xuống đây)
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg border border-gray-100">
@@ -52,9 +51,28 @@ export default function Register() {
               <label className="block text-sm font-medium text-gray-700">Email</label>
               <input name="email" type="email" required className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Nhập email của bạn" value={formData.email} onChange={handleChange} />
             </div>
+
+            {/* Phần Mật khẩu đã cập nhật */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Mật khẩu</label>
-              <input name="password" type="password" required className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Tạo mật khẩu" value={formData.password} onChange={handleChange} />
+              <div className="relative mt-1">
+                <input 
+                  name="password" 
+                  type={showPassword ? "text" : "password"} 
+                  required 
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm pr-10" 
+                  placeholder="Tạo mật khẩu" 
+                  value={formData.password} 
+                  onChange={handleChange} 
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
 
