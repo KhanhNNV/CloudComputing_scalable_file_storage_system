@@ -47,4 +47,44 @@ export const fileService = {
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     },
+
+    // 5. Hàm chuyển file vào thùng rác (Soft Delete)
+    moveToTrash: async (fileId) => {
+        try {
+            // BE sử dụng phương thức DELETE theo FileController
+            const response = await api.delete(`/api/files/${fileId}`);
+            return response.data;
+        } catch (error) {
+            console.error("Lỗi khi chuyển file vào thùng rác:", error);
+            throw error;
+        }
+    },
+
+    // 6. Lấy link tải xuống trực tiếp (Presigned URL để download)
+    getDownloadUrl: async (fileId) => {
+        try {
+            // BE sử dụng đường dẫn /download-url
+            const response = await api.get(`/api/files/${fileId}/download-url`);
+            return response.data;
+        } catch (error) {
+            console.error("Lỗi khi lấy link tải file:", error);
+            throw error;
+        }
+    },
+
+    restoreFile: async (fileId) => {
+        try {
+            const response = await api.post(`/api/files/${fileId}/restore`);
+            return response.data;
+        } catch (error) {
+            console.error("Lỗi khi khôi phục file:", error);
+            throw error;
+        }
+    },
+
+    deleteFile: async (fileId) => 
+    {
+    const response = await api.delete(`/api/files/${fileId}`);
+    return response.data;
+    }
 };

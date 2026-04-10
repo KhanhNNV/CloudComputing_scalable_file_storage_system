@@ -5,6 +5,7 @@ import Drive from './pages/Drive/Drive';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import ProtectedRoute from './components/ProtectedRoute';
+import Trash from './pages/Trash/Trash';
 
 function App() {
   return (
@@ -16,7 +17,7 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<MainLayout />}>
             <Route index element={<Drive />} />
-            <Route path="trash" element={<div className="p-4">Trash Page Coming Soon</div>} />
+            <Route path="trash" element={<Trash />} />
           </Route>
         </Route>
         

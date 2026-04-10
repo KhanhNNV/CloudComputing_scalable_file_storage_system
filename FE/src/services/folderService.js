@@ -28,5 +28,42 @@ export const folderService = {
             console.error("Lỗi khi lấy nội dung thư mục:", error);
             throw error;
         }
+    },
+
+    // Hàm chuyển thư mục vào thùng rác (Soft Delete)
+    moveToTrash: async (folderId) => {
+        try {
+            const response = await api.delete(`/api/folders/${folderId}`);
+            return response.data;
+        } catch (error) {
+            console.error("Lỗi khi chuyển thư mục vào thùng rác:", error);
+            throw error;
+        }
+    },
+
+    getUnifiedTrash: async () => {
+        try {
+            const response = await api.get('/api/folders/trash/all');
+            return response.data;
+        } catch (error) {
+            console.error("Lỗi khi lấy dữ liệu thùng rác:", error);
+            throw error;
+        }
+    },
+
+    restoreFolder: async (folderId) => {
+        try {
+            const response = await api.post(`/api/folders/${folderId}/restore`);
+            return response.data;
+        } catch (error) {
+            console.error("Lỗi khi khôi phục thư mục:", error);
+            throw error;
+        }
+    },
+
+    deleteFolder: async (folderId) => 
+    {
+    const response = await api.delete(`/api/folders/${folderId}`);
+    return response.data;
     }
 };
