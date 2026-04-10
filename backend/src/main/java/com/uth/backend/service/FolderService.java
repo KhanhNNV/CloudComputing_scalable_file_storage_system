@@ -14,4 +14,5 @@ public interface FolderService {
     void restoreFolder(String email, Long folderId);
     FolderContentResponse getFolderContent(String email, Long folderId);
     FolderContentResponse getUnifiedTrash(String email);
+    void forceDeleteFolder(String email, Long folderId);
 }

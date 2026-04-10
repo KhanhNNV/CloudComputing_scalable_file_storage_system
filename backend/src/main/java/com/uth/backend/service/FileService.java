@@ -19,4 +19,5 @@ public interface FileService {
     void restoreFile(String email, Long fileId);
     void deleteFilesByFolder(String email, Long folderId);
     void restoreFilesByFolder(String email, Long folderId);
+    void forceDeleteFile(String email, Long fileId);
 }

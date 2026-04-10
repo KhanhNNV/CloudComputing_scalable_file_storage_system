@@ -62,4 +62,12 @@ public class FolderController {
         folderService.deleteFolder(authentication.getName(), folderId);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{id}/force")
+    public ResponseEntity<Void> forceDeleteFolder(
+            @PathVariable("id") Long folderId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        folderService.forceDeleteFolder(authentication.getName(), folderId);
+        return ResponseEntity.noContent().build();
+    }
 }
