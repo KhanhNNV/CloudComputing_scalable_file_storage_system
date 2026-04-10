@@ -82,9 +82,9 @@ export const fileService = {
         }
     },
 
-    deleteFile: async (fileId) => 
+    forceDeleteFile: async (id) => 
     {
-    const response = await api.delete(`/api/files/${fileId}`);
+    const response = await api.delete(`/api/files/${id}/force`);
     return response.data;
     }
 };

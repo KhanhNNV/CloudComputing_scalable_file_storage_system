@@ -83,37 +83,44 @@ export default function Trash() {
     }
   };
 
-  // ==========================================
-  // XỬ LÝ XÓA VĨNH VIỄN (HARD DELETE)
-  // ==========================================
+// --- Xóa vĩnh viễn Folder ---
   const handleHardDeleteFolder = async (folderId) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa VĨNH VIỄN thư mục này? Dữ liệu sẽ không thể khôi phục.")) {
       try {
-        await folderService.deleteFolder(folderId);
+        // GỌI HÀM FORCE DELETE MỚI
+        await folderService.forceDeleteFolder(folderId); 
+        
         setTrashItems(prev => ({
           ...prev,
           folders: prev.folders.filter(f => f.id !== folderId)
         }));
-        setOpenMenuId(null); // Đóng menu sau khi thực hiện
+        alert("Đã xóa vĩnh viễn thư mục thành công.");
       } catch (error) {
-        console.error("Chi tiết lỗi xóa vĩnh viễn thư mục:", error);
+        console.error("Lỗi xóa vĩnh viễn thư mục:", error);
         alert("Lỗi khi xóa vĩnh viễn thư mục.");
+      } finally { 
+        setOpenMenuId(null); 
       }
     }
   };
 
+  // --- Xóa vĩnh viễn File ---
   const handleHardDeleteFile = async (fileId) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa VĨNH VIỄN file này? Dữ liệu sẽ không thể khôi phục.")) {
+    if (window.confirm("Bạn có chắc chắn muốn xóa VĨNH VIỄN tệp này? Dữ liệu sẽ bị xóa khỏi hệ thống hoàn toàn.")) {
       try {
-        await fileService.deleteFile(fileId);
+        // GỌI HÀM FORCE DELETE MỚI
+        await fileService.forceDeleteFile(fileId);
+        
         setTrashItems(prev => ({
           ...prev,
           files: prev.files.filter(f => f.id !== fileId)
         }));
-        setOpenMenuId(null); // Đóng menu sau khi thực hiện
+        alert("Đã xóa vĩnh viễn tệp thành công.");
       } catch (error) {
-        console.error("Chi tiết lỗi xóa vĩnh viễn file:", error);
-        alert("Lỗi khi xóa vĩnh viễn file.");
+        console.error("Lỗi xóa vĩnh viễn file:", error);
+        alert("Lỗi khi xóa vĩnh viễn tệp.");
+      } finally { 
+        setOpenMenuId(null); 
       }
     }
   };
