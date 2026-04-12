@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Cloud } from 'lucide-react';
-import authService from '../../services/authService'; // Đã đổi thành import default
+import { Cloud, Eye, EyeOff } from 'lucide-react'; // Thêm Eye, EyeOff
+import authService from '../../services/authService';
 
 export default function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // State quản lý ẩn/hiện
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -17,15 +18,10 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-
     try {
-      // authService đã tự lo việc lưu token vào localStorage rồi
       await authService.login(formData.email, formData.password);
-      
-      // Thành công thì chuyển về trang chủ
       navigate('/');
     } catch (err) {
-      // Bắt lỗi nếu sai tài khoản/mật khẩu
       setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
@@ -57,17 +53,28 @@ export default function Login() {
                 onChange={handleChange}
               />
             </div>
+            
+            {/* Phần Mật khẩu đã cập nhật */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Mật khẩu</label>
-              <input
-                name="password"
-                type="password"
-                required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="Nhập mật khẩu"
-                value={formData.password}
-                onChange={handleChange}
-              />
+              <div className="relative mt-1">
+                <input
+                  name="password"
+                  type={showPassword ? "text" : "password"} // Thay đổi type dựa trên state
+                  required
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm pr-10"
+                  placeholder="Nhập mật khẩu"
+                  value={formData.password}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button" // Rất quan trọng để không làm submit form
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
 
