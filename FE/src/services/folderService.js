@@ -61,9 +61,13 @@ export const folderService = {
         }
     },
 
-    forceDeleteFolder: async (id) => 
-    {
-    const response = await api.delete(`/api/folders/${id}/force`);
-    return response.data;
+    forceDeleteFolder: async (id) => {
+        const response = await api.delete(`/api/folders/${id}/force`);
+        return response.data;
+    },
+
+    emptyTrash: async () => {
+        const response = await api.delete('/api/folders/trash/empty');
+        return response.data;
     }
 };

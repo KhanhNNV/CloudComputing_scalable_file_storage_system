@@ -15,4 +15,5 @@ public interface FileRepository extends JpaRepository<File, Long> {
     boolean existsByOwnerIdAndNameAndFolderIsNullAndIsDeletedFalse(Long ownerId, String name);
     List<File> findByOwnerIdAndIsDeletedTrue(Long ownerId);
     boolean existsByStorageObjectIdAndIdNot(Long storageObjectId, Long fileId);
+    List<File> findByOwnerIdAndNameContainingIgnoreCaseAndIsDeletedFalse(Long ownerId, String name);
 }

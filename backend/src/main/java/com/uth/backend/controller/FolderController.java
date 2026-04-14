@@ -70,4 +70,11 @@ public class FolderController {
         folderService.forceDeleteFolder(authentication.getName(), folderId);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/trash/empty")
+    public ResponseEntity<Void> emptyTrash() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        folderService.emptyTrash(authentication.getName());
+        return ResponseEntity.noContent().build();
+    }
 }

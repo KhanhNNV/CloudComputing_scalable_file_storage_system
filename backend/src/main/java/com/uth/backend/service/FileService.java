@@ -20,4 +20,6 @@ public interface FileService {
     void deleteFilesByFolder(String email, Long folderId);
     void restoreFilesByFolder(String email, Long folderId);
     void forceDeleteFile(String email, Long fileId);
+    List<FileResponse> searchFiles(String email, String query);
+    void emptyTrash(String email);
 }

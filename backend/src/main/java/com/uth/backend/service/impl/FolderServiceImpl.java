@@ -296,6 +296,38 @@ public class FolderServiceImpl implements FolderService {
         }
 
         // 3. Cuối cùng xoá bản ghi chính Folder này
-        folderRepository.delete(folder);
+    }
+
+    @Override
+    public List<FolderResponse> searchFolders(String email, String query) {
+        User owner = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        List<Folder> folders = folderRepository.findByOwnerIdAndNameContainingIgnoreCaseAndIsDeletedFalse(owner.getId(), query);
+        return folders.stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void emptyTrash(String email) {
+        // 1. Dọn sạch File rác (dùng chính logic của FileService)
+        fileService.emptyTrash(email);
+
+        // 2. Dọn sạch Folder rác
+        User owner = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        
+        // Lấy tất cả folder đang bị xóa của user này
+        List<Folder> trashedFolders = folderRepository.findByOwnerIdAndIsDeletedTrue(owner.getId());
+        
+        // Chỉ cần "force delete" các folder cấp cao nhất trong thùng rác
+        // (những folder có cha không bị xóa hoặc không có cha)
+        // Tuy nhiên, để an toàn và triệt để, ta dùng forceDeleteFolder cho các folder "top-level" trong danh sách rác
+        List<Folder> topLevelTrash = trashedFolders.stream()
+                .filter(f -> f.getParentFolder() == null || !f.getParentFolder().isDeleted())
+                .collect(Collectors.toList());
+
+        for (Folder folder : topLevelTrash) {
+            forceDeleteFolder(email, folder.getId());
+        }
     }
 }
