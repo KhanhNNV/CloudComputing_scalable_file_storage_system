@@ -362,4 +362,23 @@ public class FileServiceImpl implements FileService {
             }
         }
     }
+
+    @Override
+    public List<FileResponse> searchFiles(String email, String query) {
+        User owner = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        List<File> files = fileRepository.findByOwnerIdAndNameContainingIgnoreCaseAndIsDeletedFalse(owner.getId(), query);
+        return files.stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void emptyTrash(String email) {
+        User owner = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        List<File> trashedFiles = fileRepository.findByOwnerIdAndIsDeletedTrue(owner.getId());
+        for (File file : trashedFiles) {
+            forceDeleteFile(email, file.getId());
+        }
+    }
 }

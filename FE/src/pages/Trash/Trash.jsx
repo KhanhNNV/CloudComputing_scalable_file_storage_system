@@ -125,6 +125,23 @@ export default function Trash() {
     }
   };
 
+  // --- Dọn sạch Thùng rác ---
+  const handleEmptyTrash = async () => {
+    if (window.confirm("BẠN CÓ CHẮC CHẮN MUỐN DỌN SẠCH THÙNG RÁC? Hành động này sẽ xóa vĩnh viễn TOÀN BỘ dữ liệu và không thể khôi phục!")) {
+      try {
+        setIsLoading(true);
+        await folderService.emptyTrash();
+        setTrashItems({ files: [], folders: [] });
+        alert("Đã dọn sạch thùng rác thành công.");
+      } catch (error) {
+        console.error("Lỗi khi dọn sạch thùng rác:", error);
+        alert("Lỗi khi dọn sạch thùng rác. Vui lòng thử lại.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
   if (isLoading) {
     return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>;
   }
@@ -134,6 +151,15 @@ export default function Trash() {
   <div className="flex items-center gap-3 mb-8">
     <Trash2 className="w-8 h-8 text-red-500" />
     <h1 className="text-2xl font-bold text-gray-800">Thùng rác</h1>
+    {(trashItems.folders.length > 0 || trashItems.files.length > 0) && (
+      <button 
+        onClick={handleEmptyTrash}
+        className="ml-auto flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm font-semibold border border-red-100"
+      >
+        <Trash2 className="w-4 h-4" />
+        Dọn sạch thùng rác
+      </button>
+    )}
   </div>
   
   {trashItems.folders.length === 0 && trashItems.files.length === 0 ? (

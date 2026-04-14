@@ -17,13 +17,14 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    public User getUserEntityById(Long id) {
-        return userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+    public User getUserEntityByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     @Override
-    public UserResponse getUserById(Long id) {
-        User user = getUserEntityById(id);
+    public UserResponse getUserByEmail(String email) {
+        User user = getUserEntityByEmail(email);
         return UserResponse.builder()
                 .id(user.getId())
                 .fullName(user.getFullName())

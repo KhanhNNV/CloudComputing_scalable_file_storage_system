@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, User, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, User, LogOut } from 'lucide-react';
 import authService from '../services/authService'; 
 import { userService } from '../services/userService'; 
 import { jwtDecode } from "jwt-decode"; 
 
-export default function Header() {
+export default function Header({ searchQuery, setSearchQuery }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -37,6 +39,13 @@ export default function Header() {
     await authService.logout();
   };
 
+  const handleSearch = (e) => {
+    // Không cần điều hướng trên Enter vì kết quả sẽ hiện ngay tại chỗ
+    if (e.key === 'Enter') {
+      e.preventDefault();
+    }
+  };
+
   return (
     <header className="h-20 border-b border-gray-200 flex items-center justify-between px-8 bg-white">
       {/* KHU VỰC TÌM KIẾM */}
@@ -47,15 +56,15 @@ export default function Header() {
             type="text" 
             placeholder="Tìm kiếm trong Drive..." 
             className="w-full pl-12 pr-4 py-3 bg-gray-100/80 border border-transparent rounded-full focus:bg-white focus:border-blue-300 focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-300 text-sm text-gray-700 placeholder-gray-500 shadow-sm hover:bg-gray-100"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearch}
           />
         </div>
       </div>
       
       {/* KHU VỰC BÊN PHẢI */}
-      <div className="flex items-center gap-6 ml-4">
-        <button className="p-2.5 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
-          <Bell className="w-5 h-5" />
-        </button>
+      <div className="flex items-center ml-4">
         
         <div className="relative">
           <div 

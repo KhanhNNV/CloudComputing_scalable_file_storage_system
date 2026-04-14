@@ -15,4 +15,6 @@ public interface FolderService {
     FolderContentResponse getFolderContent(String email, Long folderId);
     FolderContentResponse getUnifiedTrash(String email);
     void forceDeleteFolder(String email, Long folderId);
+    List<FolderResponse> searchFolders(String email, String query);
+    void emptyTrash(String email);
 }
