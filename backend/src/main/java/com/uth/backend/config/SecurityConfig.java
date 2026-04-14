@@ -50,7 +50,10 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(List.of(
             "http://localhost:5173",
             "http://localhost:5174", 
-            "http://localhost:3000"
+            "http://localhost:3000",
+                "http://18.138.240.4",
+                "http://18.138.240.4:80"
+
         ));
         
         // 2. Thêm dòng này để cho phép Frontend gửi Cookie (kết hợp với withCredentials: true)
