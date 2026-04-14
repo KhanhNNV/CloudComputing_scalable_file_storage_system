@@ -11,8 +11,6 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
-# profile chạy prod
-ENV SPRING_PROFILES_ACTIVE=prod
 
 COPY --from=builder /app/target/*.jar app.jar
 
