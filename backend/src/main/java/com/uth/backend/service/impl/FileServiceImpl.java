@@ -116,6 +116,11 @@ public class FileServiceImpl implements FileService {
             newObj.setSize(request.getFileSize());
             newObj.setMimeType(request.getContentType());
             newObj.setStatus("uploading");
+            //
+            if (request.getContentType() != null && request.getContentType().toLowerCase().startsWith("image/")) {
+                String thumbnailKey = fileKey.replaceFirst("users/", "thumbnails/");
+                newObj.setThumbnailS3Key(thumbnailKey);
+            }
             storageObjectRepository.save(newObj);
             
             return UploadResponseDto.builder()
@@ -310,8 +315,10 @@ public class FileServiceImpl implements FileService {
 
             downloadUrl = s3Service.generateDownloadPresignedUrl(s3Key, file.getName());
             if (mimeType != null && mimeType.toLowerCase().startsWith("image/")) {
-                String thumbKey = s3Key.replaceFirst("users/", "thumbnails/");
-                thumbnailUrl = s3Service.generateDownloadPresignedUrl(thumbKey, "thumb_" + file.getName());
+                String thumbKey = file.getStorageObject().getThumbnailS3Key();
+                if (thumbKey != null) {
+                    thumbnailUrl = s3Service.generateDownloadPresignedUrl(thumbKey, "thumb_" + file.getName());
+                }
             }
         }
 
@@ -353,9 +360,15 @@ public class FileServiceImpl implements FileService {
             if (!isReferenced) {
                 // Xoá vật lý trên S3
                 s3Service.deleteFileFromS3(storageObject.getS3Key());
+//                if (storageObject.getMimeType() != null && storageObject.getMimeType().toLowerCase().startsWith("image/")) {
+//                    String thumbKey = storageObject.getS3Key().replaceFirst("users/", "thumbnails/");
+//                    s3Service.deleteFileFromS3(thumbKey);
+//                }
                 if (storageObject.getMimeType() != null && storageObject.getMimeType().toLowerCase().startsWith("image/")) {
-                    String thumbKey = storageObject.getS3Key().replaceFirst("users/", "thumbnails/");
-                    s3Service.deleteFileFromS3(thumbKey);
+                    String thumbKey = storageObject.getThumbnailS3Key();
+                    if (thumbKey != null) {
+                        s3Service.deleteFileFromS3(thumbKey);
+                    }
                 }
                 // Xoá storage object
                 storageObjectRepository.delete(storageObject);
