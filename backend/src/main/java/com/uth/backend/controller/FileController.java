@@ -1,9 +1,8 @@
 package com.uth.backend.controller;
 
-import com.uth.backend.dto.request.ConfirmUploadRequestDto;
-import com.uth.backend.dto.request.FileCreateRequest;
-import com.uth.backend.dto.request.UploadRequestDto;
+import com.uth.backend.dto.request.*;
 import com.uth.backend.dto.response.FileResponse;
+import com.uth.backend.dto.response.InitiateMultipartResponseDto;
 import com.uth.backend.dto.response.UploadResponseDto;
 import com.uth.backend.service.FileService;
 import lombok.RequiredArgsConstructor;
@@ -82,4 +81,25 @@ public class FileController {
         fileService.restoreFile(authentication.getName(), fileId);
         return ResponseEntity.ok().build();
     }
+
+
+
+    // API 1: Khởi tạo Multipart Upload và lấy danh sách Presigned URLs
+    @PostMapping("/multipart/initiate")
+    public ResponseEntity<InitiateMultipartResponseDto> initiateMultipartUpload(
+            @RequestBody InitiateMultipartRequestDto request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        InitiateMultipartResponseDto response = fileService.initiateMultipartUpload(authentication.getName(), request);
+        return ResponseEntity.ok(response);
+    }
+
+    // API 2: Xác nhận gộp file sau khi Frontend đã up đủ các mảnh
+    @PostMapping("/multipart/complete")
+    public ResponseEntity<Void> completeMultipartUpload(
+            @RequestBody CompleteMultipartRequestDto request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        fileService.completeMultipartUpload(authentication.getName(), request);
+        return ResponseEntity.ok().build();
+    }
 }
+

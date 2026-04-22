@@ -1,9 +1,8 @@
 package com.uth.backend.service;
 
-import com.uth.backend.dto.request.ConfirmUploadRequestDto;
-import com.uth.backend.dto.request.FileCreateRequest;
-import com.uth.backend.dto.request.UploadRequestDto;
+import com.uth.backend.dto.request.*;
 import com.uth.backend.dto.response.FileResponse;
+import com.uth.backend.dto.response.InitiateMultipartResponseDto;
 import com.uth.backend.dto.response.UploadResponseDto;
 
 import java.util.List;
@@ -22,4 +21,6 @@ public interface FileService {
     void forceDeleteFile(String email, Long fileId);
     List<FileResponse> searchFiles(String email, String query);
     void emptyTrash(String email);
+    InitiateMultipartResponseDto initiateMultipartUpload(String email, InitiateMultipartRequestDto request);
+    void completeMultipartUpload(String email, CompleteMultipartRequestDto request);
 }
