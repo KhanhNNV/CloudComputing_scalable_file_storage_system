@@ -1,9 +1,8 @@
 package com.uth.backend.service.impl;
 
-import com.uth.backend.dto.request.ConfirmUploadRequestDto;
-import com.uth.backend.dto.request.FileCreateRequest;
-import com.uth.backend.dto.request.UploadRequestDto;
+import com.uth.backend.dto.request.*;
 import com.uth.backend.dto.response.FileResponse;
+import com.uth.backend.dto.response.InitiateMultipartResponseDto;
 import com.uth.backend.dto.response.UploadResponseDataDto;
 import com.uth.backend.dto.response.UploadResponseDto;
 import com.uth.backend.model.File;
@@ -116,6 +115,11 @@ public class FileServiceImpl implements FileService {
             newObj.setSize(request.getFileSize());
             newObj.setMimeType(request.getContentType());
             newObj.setStatus("uploading");
+            //
+            if (request.getContentType() != null && request.getContentType().toLowerCase().startsWith("image/")) {
+                String thumbnailKey = fileKey.replaceFirst("users/", "thumbnails/");
+                newObj.setThumbnailS3Key(thumbnailKey);
+            }
             storageObjectRepository.save(newObj);
             
             return UploadResponseDto.builder()
@@ -310,8 +314,10 @@ public class FileServiceImpl implements FileService {
 
             downloadUrl = s3Service.generateDownloadPresignedUrl(s3Key, file.getName());
             if (mimeType != null && mimeType.toLowerCase().startsWith("image/")) {
-                String thumbKey = s3Key.replaceFirst("users/", "thumbnails/");
-                thumbnailUrl = s3Service.generateDownloadPresignedUrl(thumbKey, "thumb_" + file.getName());
+                String thumbKey = file.getStorageObject().getThumbnailS3Key();
+                if (thumbKey != null) {
+                    thumbnailUrl = s3Service.generateDownloadPresignedUrl(thumbKey, "thumb_" + file.getName());
+                }
             }
         }
 
@@ -353,9 +359,15 @@ public class FileServiceImpl implements FileService {
             if (!isReferenced) {
                 // Xoá vật lý trên S3
                 s3Service.deleteFileFromS3(storageObject.getS3Key());
+//                if (storageObject.getMimeType() != null && storageObject.getMimeType().toLowerCase().startsWith("image/")) {
+//                    String thumbKey = storageObject.getS3Key().replaceFirst("users/", "thumbnails/");
+//                    s3Service.deleteFileFromS3(thumbKey);
+//                }
                 if (storageObject.getMimeType() != null && storageObject.getMimeType().toLowerCase().startsWith("image/")) {
-                    String thumbKey = storageObject.getS3Key().replaceFirst("users/", "thumbnails/");
-                    s3Service.deleteFileFromS3(thumbKey);
+                    String thumbKey = storageObject.getThumbnailS3Key();
+                    if (thumbKey != null) {
+                        s3Service.deleteFileFromS3(thumbKey);
+                    }
                 }
                 // Xoá storage object
                 storageObjectRepository.delete(storageObject);
@@ -380,5 +392,55 @@ public class FileServiceImpl implements FileService {
         for (File file : trashedFiles) {
             forceDeleteFile(email, file.getId());
         }
+    }
+
+
+
+    @Transactional
+    public InitiateMultipartResponseDto initiateMultipartUpload(String email, InitiateMultipartRequestDto request) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+
+        // Tạo một Key độc nhất cho file trên S3
+        String fileKey = "users/" + owner.getId() + "/" + System.currentTimeMillis() + "-" + request.getFileName();
+
+        // 1. Gọi S3 tạo ID
+        String uploadId = s3Service.createMultipartUpload(fileKey, request.getContentType());
+
+        // 2. Tạo danh sách link
+        List<String> presignedUrls = s3Service.generatePresignedUrlsForParts(fileKey, uploadId, request.getTotalParts());
+
+        return InitiateMultipartResponseDto.builder()
+                .uploadId(uploadId)
+                .fileKey(fileKey)
+                .presignedUrls(presignedUrls)
+                .build();
+    }
+
+    @Transactional
+    public void completeMultipartUpload(String email, CompleteMultipartRequestDto request) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+
+        // 1. Ra lệnh cho S3 gộp file
+        s3Service.completeMultipartUpload(request.getFileKey(), request.getUploadId(), request.getParts());
+
+        // 2. Lưu thông tin vào bảng storage_objects
+        StorageObject newObj = new StorageObject();
+        newObj.setS3Key(request.getFileKey());
+        newObj.setStatus("ready");
+
+        // --- BƠM DỮ LIỆU ĐẦY ĐỦ VÀO ĐÂY ---
+        newObj.setSize(request.getFileSize());
+        newObj.setMimeType(request.getContentType());
+        newObj.setSha256(request.getSha256());
+
+        // Nếu là ảnh thì lưu thêm đường dẫn thumbnail để Lambda cắt
+        if (request.getFileKey().toLowerCase().matches(".*\\.(jpg|jpeg|png|gif)$")) {
+            newObj.setThumbnailS3Key(request.getFileKey().replaceFirst("users/", "thumbnails/"));
+        }
+
+        storageObjectRepository.save(newObj);
+
+        // 3. Lưu vào bảng files
+        saveFileToDatabase(request.getFileName(), request.getFolderId(), owner, newObj);
     }
 }

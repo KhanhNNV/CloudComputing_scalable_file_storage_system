@@ -93,5 +93,28 @@ export const fileService = {
     {
     const response = await api.delete(`/api/files/${id}/force`);
     return response.data;
+    },
+    // CÁC HÀM MỚI CHO MULTIPART UPLOAD (BĂM FILE)
+
+    //  Khởi tạo Multipart Upload (Lấy UploadId và danh sách link)
+    initiateMultipartUpload: async (uploadRequestDto) => {
+        try {
+            const response = await api.post('/api/files/multipart/initiate', uploadRequestDto);
+            return response.data; // Trả về { uploadId, fileKey, presignedUrls }
+        } catch (error) {
+            console.error("Lỗi khi khởi tạo băm file:", error);
+            throw error;
+        }
+    },
+
+    // Xác nhận gộp file sau khi up đủ các mảnh
+    completeMultipartUpload: async (completeRequestDto) => {
+        try {
+            const response = await api.post('/api/files/multipart/complete', completeRequestDto);
+            return response.data;
+        } catch (error) {
+            console.error("Lỗi khi xác nhận gộp file:", error);
+            throw error;
+        }
     }
 };

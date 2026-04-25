@@ -3,6 +3,9 @@ import { X, FileUp } from 'lucide-react';
 import { fileService } from '../../services/fileService';
 import axios from 'axios'; // Giữ lại axios để bắn file trực tiếp lên S3 qua presigned URL
 
+
+// AWS yêu cầu mỗi phần (part) phải tối thiểu 5MB
+const CHUNK_SIZE = 5 * 1024 * 1024;
 export default function UploadModal({ isOpen, onClose, currentFolderId }) {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadingFileName, setUploadingFileName] = useState('');
@@ -31,61 +34,108 @@ export default function UploadModal({ isOpen, onClose, currentFolderId }) {
             const hash = await fileService.calculateFileHash(file);
             console.log("%c ===> SHA-256: " + hash, "color: #10b981; font-weight: bold; font-size: 14px;");
 
-            // BƯỚC 1: XIN VÉ UPLOAD
-            const requestPayload = {
-                fileName: file.name,
-                fileSize: file.size,
-                contentType: file.type || 'application/octet-stream',
-                folderId: currentFolderId, // CẬP NHẬT: Truyền ID thực tế thay vì null
-                sha256: hash
-            };
-
-            const responseData = await fileService.requestUpload(requestPayload);
-            const result = responseData.data || responseData;
-            const { isDuplicate, uploadUrl, fileKey } = result;
-
-            if (isDuplicate) {
-                setUploadProgress(100);
-                setTimeout(() => {
-                    alert("Upload thành công! (File đã tồn tại, Backend tự động map)");
-                    resetAndClose();
-                }, 500);
-                return;
+            // NẾU FILE NHỎ HƠN 5MB -> DÙNG LUỒNG CŨ (UP 1 LẦN)
+            if (file.size < CHUNK_SIZE) {
+                await handleStandardUpload(file, hash);
             }
-
-            // BƯỚC 2: BẮN FILE LÊN AWS S3 
-            await axios.put(uploadUrl, file, {
-                headers: {
-                    'Content-Type': file.type || 'application/octet-stream'
-                },
-                onUploadProgress: (progressEvent) => {
-                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                    setUploadProgress(percentCompleted);
-                }
-            });
-
-            // BƯỚC 3: XÁC NHẬN HOÀN TẤT VỚI BACKEND
-            const confirmPayload = {
-                fileKey: fileKey,
-                fileName: file.name,
-                folderId: currentFolderId // CẬP NHẬT: Truyền ID thực tế thay vì null
-            };
-            
-            await fileService.confirmUpload(confirmPayload);
-
-            setUploadProgress(100);
-            
-            setTimeout(() => {
-                alert("Upload thành công! File đã lưu vào Database.");
-                resetAndClose();
-            }, 500);
+            // NẾU FILE LỚN HƠN 5MB -> DÙNG LUỒNG MỚI (BĂM NHỎ)
+            else {
+                await handleMultipartUpload(file, hash);
+            }
 
         } catch (error) {
             console.error("Lỗi trong quá trình upload:", error);
-            const errorMsg = error.response?.data?.message || "Đã xảy ra lỗi khi upload file. Vui lòng thử lại!";
-            alert(errorMsg);
+            alert("Đã xảy ra lỗi khi upload file. Vui lòng thử lại!");
             resetAndClose();
         }
+    };
+    // --- LUỒNG 1: UPLOAD BÌNH THƯỜNG ---
+    const handleStandardUpload = async (file, hash) => {
+        const requestPayload = {
+            fileName: file.name, fileSize: file.size,
+            contentType: file.type || 'application/octet-stream',
+            folderId: currentFolderId, sha256: hash
+        };
+
+        const { data } = await fileService.requestUpload(requestPayload);
+        if (data.isDuplicate) {
+            finishUpload("Upload thành công! (File đã tồn tại)");
+            return;
+        }
+
+        await axios.put(data.uploadUrl, file, {
+            headers: { 'Content-Type': file.type || 'application/octet-stream' },
+            onUploadProgress: (p) => setUploadProgress(Math.round((p.loaded * 100) / p.total))
+        });
+
+        await fileService.confirmUpload({ fileKey: data.fileKey, fileName: file.name, folderId: currentFolderId });
+        finishUpload("Upload thành công! File đã lưu vào Database.");
+    };
+    // --- LUỒNG 2: UPLOAD BĂM NHỎ (MULTIPART) ---
+    const handleMultipartUpload = async (file, hash) => {
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        console.log(`[Multipart] Bắt đầu chia file thành ${totalChunks} phần...`);
+
+        // 1. Xin Backend khởi tạo Multipart Upload
+        // 1. Xin Backend khởi tạo Multipart Upload
+        const responseData = await fileService.initiateMultipartUpload({
+            fileName: file.name,
+            contentType: file.type || 'application/octet-stream',
+            totalParts: totalChunks,
+            folderId: currentFolderId,
+            sha256: hash
+        });
+
+        // Bỏ chữ data đi, lấy trực tiếp từ responseData
+        const { uploadId, fileKey, presignedUrls } = responseData;
+        const uploadedParts = [];
+        let totalUploadedBytes = 0;
+
+        // 2. Vòng lặp bắn từng cục file lên S3
+        for (let i = 0; i < totalChunks; i++) {
+            const start = i * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            const chunk = file.slice(start, end);
+
+            const uploadUrl = presignedUrls[i];
+
+            const response = await axios.put(uploadUrl, chunk, {
+                headers: { 'Content-Type': file.type || 'application/octet-stream' }
+            });
+
+            // Lấy nguyên vẹn ETag (GIỮ NGUYÊN DẤU NGOẶC KÉP CỦA AWS)
+            const etag = response.headers.etag || response.headers['etag'];
+
+            console.log(`[Part ${i + 1}] ETag chuẩn AWS:`, etag);
+
+            if (!etag) {
+                alert("Cảnh báo: Không lấy được ETag! Vui lòng vào AWS S3 -> CORS -> Thêm 'ExposeHeaders': ['ETag']");
+                return; // Dừng lại vì có đi tiếp AWS cũng báo lỗi
+            }
+
+            // Đổi chữ eTag thành etag (chữ thường) để khớp với Java
+            uploadedParts.push({ partNumber: i + 1, etag: etag });
+
+            totalUploadedBytes += chunk.size;
+            setUploadProgress(Math.round((totalUploadedBytes * 100) / file.size));
+        }
+
+        // 3. Báo Backend gộp file (Bảo vệ folderId lỡ bị rỗng)
+        await fileService.completeMultipartUpload({
+            uploadId, fileKey, fileName: file.name,
+            folderId: currentFolderId ? Number(currentFolderId) : null,
+            parts: uploadedParts,
+            contentType: file.type || 'application/octet-stream',
+            fileSize: file.size,
+            sha256: hash
+        });
+
+        finishUpload("Upload file lớn thành công! Đã gộp file.");
+    };
+
+    const finishUpload = (message) => {
+        setUploadProgress(100);
+        setTimeout(() => { alert(message); resetAndClose(); }, 500);
     };
 
     return (
