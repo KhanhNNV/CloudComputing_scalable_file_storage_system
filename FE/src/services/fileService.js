@@ -1,5 +1,6 @@
 // src/services/fileService.js
 import api from './api'; 
+import { sha256 } from 'js-sha256';
 
 export const fileService = {
     // 1. Lấy danh sách file (Hoàn toàn không còn userId)
@@ -42,10 +43,16 @@ export const fileService = {
 
     // 4. Hàm mã hóa băm file (Giữ nguyên của bạn)
     calculateFileHash: async (file) => {
-        const arrayBuffer = await file.arrayBuffer();
-        const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        try {
+            // Đọc file dưới dạng ArrayBuffer
+            const arrayBuffer = await file.arrayBuffer();
+            // Dùng thư viện js-sha256 để băm
+            const hash = sha256(arrayBuffer);
+            return hash;
+        } catch (error) {
+            console.error("Lỗi khi băm file:", error);
+            throw error;
+        }
     },
 
     // 5. Hàm chuyển file vào thùng rác (Soft Delete)
